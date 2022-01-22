@@ -11,7 +11,7 @@ PROGS=$(BINDIR)/bob $(BINDIR)/bobc $(BINDIR)/bobi $(BINDIR)/bobmerge
 LIBS=$(LIBDIR)/libbobc.a $(LIBDIR)/libbobi.a
 HDRS=$(HDRDIR)/bob.h $(HDRDIR)/bobint.h $(HDRDIR)/bobcom.h
 
-CFLAGS=$(XCFLAGS) -Wall -I$(HDRDIR) -I./bobcom -I./bobint -DBOB_INCLUDE_FLOAT_SUPPORT
+CFLAGS=$(XCFLAGS) -Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers -Wimplicit-fallthrough=2 -I$(HDRDIR) -I./bobcom -I./bobint -DBOB_INCLUDE_FLOAT_SUPPORT
 
 all:	$(DIRS) $(PROGS) $(LIBS)
 
@@ -130,12 +130,15 @@ $(BINDIR)/bobmerge:	$(BOBMERGE_OBJS)
 $(BOBMERGE_OBJS):	$(OBJDIR)%.o:	util%.c $(HDRS)
 	$(CC) -c $(CFLAGS) $< -o $@
 
+$(BOBFILES): test.bob
+
 clean:	$(DIRS)
 	rm -rf $(BINDIR)
 	rm -rf $(LIBDIR)
 	rm -rf $(OBJDIR)
 
-test: test.bob
+# test direct and compile , interpreter
+test: $(BOBFILES)
 	./bin/bob test.bob
-	./bin/bobc -o test.bbo test.bob
+	./bin/bobc -o test test.bob
 	./bin/bobi test.bbo

@@ -6,98 +6,136 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "bob.h"
 
-// #define HEAP_SIZE   (1024 * 1024)
-// #define EXPAND_SIZE (512 * 1024)
-#define STACK_SIZE  (64 * 1025)
+#if 1
+
 #define INTERPRETER_SIZE    (1024 * 1024)
+#define COMPILER_SIZE       (1024 * 1024)
+#define STACK_SIZE          (64 * 1024)
+
+// #define HEAP_SIZE           (1024 * 1024)
+// #define EXPAND_SIZE         (512 * 1024)
+
+#else
+
+#define INTERPRETER_SIZE    (20 * 1024)
+#define COMPILER_SIZE       (8 * 1024)
+#define STACK_SIZE          (2 * 1024)
+
+// #define HEAP_SIZE           (20 * 1024)
+// #define EXPAND_SIZE         (10 * 1024)
+
+#endif
 
 /* console stream structure */
-typedef struct {
+typedef struct
+{
     BobStreamDispatch *d;
 } ConsoleStream;
 
 /* CloseConsoleStream - console stream close handler */
-static int CloseConsoleStream(BobStream *s)
+static int
+CloseConsoleStream(BobStream *s)
 {
     return 0;
 }
 
 /* ConsoleStreamGetC - console stream getc handler */
-static int ConsoleStreamGetC(BobStream *s)
+static int
+ConsoleStreamGetC(BobStream *s)
 {
     return getchar();
 }
 
 /* ConsoleStreamPutC - console stream putc handler */
-static int ConsoleStreamPutC(int ch,BobStream *s)
+static int
+ConsoleStreamPutC(int ch, BobStream *s)
 {
     return putchar(ch);
 }
 
 /* dispatch structure for null streams */
 BobStreamDispatch consoleDispatch = {
-  CloseConsoleStream,
-  ConsoleStreamGetC,
-  ConsoleStreamPutC
+        CloseConsoleStream,
+        ConsoleStreamGetC,
+        ConsoleStreamPutC
 };
 
 /* console stream */
-ConsoleStream consoleStream = { &consoleDispatch };
+ConsoleStream consoleStream = {&consoleDispatch};
+
+/* space for interpreter */
 static char interpreterSpace[INTERPRETER_SIZE];
+// static char compilerSpace[COMPILER_SIZE];
 
 /* ErrorHandler - error handler callback */
-void ErrorHandler(BobInterpreter *c,int code,va_list ap)
+void
+ErrorHandler(BobInterpreter *c, int code, va_list ap)
 {
     switch (code) {
+
     case BobErrExit:
         exit(1);
+
     case BobErrRestart:
         /* just restart the restart the read/eval/print loop */
         break;
+
     default:
-        BobShowError(c,code,ap);
+        BobShowError(c, code, ap);
         BobStackTrace(c);
         break;
     }
+
     BobAbort(c);
 }
 
 /* main - the main routine */
-int main(int argc,char **argv)
+int
+main(int argc, char **argv)
 {
     BobUnwindTarget target;
-    BobInterpreter *c;
+    BobInterpreter  *c;
 
     /* check the argument list */
     if (argc != 2) {
-        fprintf(stderr,"usage: bobi <object-file>\n");
+        fprintf(stderr, "usage: bobi <object-file>\n");
         exit(1);
     }
 
     /* make the workspace */
-    if ((c = BobMakeInterpreter(interpreterSpace,sizeof(interpreterSpace),STACK_SIZE)) == NULL)
+    if ((c = BobMakeInterpreter(interpreterSpace, sizeof(interpreterSpace), STACK_SIZE)) == NULL) {
         exit(1);
+    }
 
     /* setup standard i/o */
-    c->standardInput = (BobStream *)&consoleStream;
-    c->standardOutput = (BobStream *)&consoleStream;
-    c->standardError = (BobStream *)&consoleStream;
+    c->standardInput  = (BobStream * ) & consoleStream;
+    c->standardOutput = (BobStream * ) & consoleStream;
+    c->standardError  = (BobStream * ) & consoleStream;
 
     /* setup the error handler */
     c->errorHandler = ErrorHandler;
 
     /* setup the error handler target */
-    BobPushUnwindTarget(c,&target);
+    BobPushUnwindTarget(c, &target);
 
     /* abort if any errors occur during initialization */
-    if (BobUnwindCatch(c))
+    if (BobUnwindCatch(c)) {
         exit(1);
+    }
+
+    /* initialize the workspace
+    if (!BobInitInterpreter(c, HEAP_SIZE, EXPAND_SIZE, STACK_SIZE)) {
+        exit(1);
+    }
+    */
 
     /* initialize the workspace */
-    if (!BobInitInterpreter(c))
+    if (!BobInitInterpreter(c)) {
         exit(1);
+    }
 
     /* use stdio for file i/o */
     BobUseStandardIO(c);
@@ -106,7 +144,7 @@ int main(int argc,char **argv)
     BobEnterLibrarySymbols(c);
 
     /* load the command line argument */
-    BobLoadObjectFile(c,argv[1],NULL);
+    BobLoadObjectFile(c, argv[1], NULL);
 
     /* catch errors and restart read/eval/print loop */
     BobUnwindCatch(c);

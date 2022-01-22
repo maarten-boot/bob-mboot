@@ -61,77 +61,92 @@
 
 /* argument structure */
 typedef struct argument ARGUMENT;
-struct argument {
-    struct argument *arg_next;  /* next argument */
-    char arg_name[1];           /* argument name */
+
+struct argument
+{
+    struct argument *arg_next;          /* next argument */
+    char            arg_name[1];        /* argument name */
 };
 
 /* argument table structure */
 typedef struct atable ATABLE;
-struct atable {
-    ARGUMENT *at_arguments;     /* first argument */
-    ARGUMENT **at_pNextArgument;/* pointer to where to store the next argument */
-    struct atable *at_next;     /* next argument table */
+
+struct atable
+{
+    ARGUMENT      *at_arguments;        /* first argument */
+    ARGUMENT      **at_pNextArgument;   /* pointer to where to store the next argument */
+    struct atable *at_next;             /* next argument table */
 };
 
 /* break/continue stack entry structure */
 typedef struct sentry SENTRY;
-struct sentry {
-    int level;                  /* block level */
-    int label;                  /* label */
-    SENTRY *next;               /* next entry */
+
+struct sentry
+{
+    int    level;                       /* block level */
+    int    label;                       /* label */
+    SENTRY *next;                       /* next entry */
 };
 
 /* case entry structure */
 typedef struct centry CENTRY;
-struct centry {
-    int value;
-    int label;
+
+struct centry
+{
+    int    value;
+    int    label;
     CENTRY *next;
 };
 
 /* switch entry structure */
 typedef struct swentry SWENTRY;
-struct swentry {
-    int nCases;
-    CENTRY *cases;
-    int defaultLabel;
-    int label;
+
+struct swentry
+{
+    int     nCases;
+    CENTRY  *cases;
+    int     defaultLabel;
+    int     label;
     SWENTRY *next;
 };
 
-/* limits */
-#define TKNSIZE         255     /* maximum BobToken size */
-#define LSIZE           255     /* maximum line size */
 
 /* compiler context structure */
-struct BobCompiler {
-    BobInterpreter *ic;                 /* compiler - interpreter context */
-    BobStream *input;                   /* compiler - input stream */
-    int blockLevel;                     /* compiler - nesting level */
-    ATABLE *arguments;                  /* compiler - argument frames */
-    SENTRY *bsp;                        /* compiler - break stack */
-    SENTRY *csp;                        /* compiler - continue stack */
-    SWENTRY *ssp;                       /* compiler - switch stack */
-    unsigned char *codebuf;             /* compiler - code buffer */
-    unsigned char *cbase,*cptr,*ctop;   /* compiler - code buffer positions */
-    BobValue literalbuf;                /* compiler - literal buffer */
-    long lbase,lptr,ltop;               /* compiler - literal buffer positions */
-    BobIntegerType t_value;             /* scanner - integer value */
-    BobFloatType t_fvalue;              /* scanner - float value */
-    char t_token[TKNSIZE+1];            /* scanner - token string */
-    int savedToken;                     /* scanner - look ahead BobToken */
-    int savedChar;                      /* scanner - look ahead character */
-    int lineNumber;                     /* scanner - line number */
-    char line[LSIZE+1];                 /* scanner - last input line */
-    char *linePtr;                      /* scanner - line pointer */
-    int atEOF;                          /* scanner - input end of file flag */
+struct BobCompiler
+{
+    BobInterpreter *ic;                  /* compiler - interpreter context */
+    BobStream      *input;               /* compiler - input stream */
+    int            blockLevel;           /* compiler - nesting level */
+    ATABLE         *arguments;           /* compiler - argument frames */
+    SENTRY         *bsp;                 /* compiler - break stack */
+    SENTRY         *csp;                 /* compiler - continue stack */
+    SWENTRY        *ssp;                 /* compiler - switch stack */
+    unsigned char  *codebuf;             /* compiler - code buffer */
+    unsigned char  *cbase, *cptr, *ctop; /* compiler - code buffer positions */
+    BobValue       literalbuf;           /* compiler - literal buffer */
+    long           lbase, lptr, ltop;    /* compiler - literal buffer positions */
+    BobIntegerType t_value;              /* scanner - integer value */
+    BobFloatType   t_fvalue;             /* scanner - float value */
+    char           t_token[TKNSIZE + 1]; /* scanner - token string */
+    int            savedToken;           /* scanner - look ahead BobToken */
+    int            savedChar;            /* scanner - look ahead character */
+    int            lineNumber;           /* scanner - line number */
+    char           line[LSIZE + 1];      /* scanner - last input line */
+    char           *linePtr;             /* scanner - line pointer */
+    int            atEOF;                /* scanner - input end of file flag */
 };
 
 /* prototypes for scanner.c */
-int BobToken(BobCompiler *c);
-void BobSaveToken(BobCompiler *c,int tkn);
-char *BobTokenName(int tkn);
-void BobParseError(BobCompiler *c,char *msg);
+int
+BobToken(BobCompiler *c);
+
+void
+BobSaveToken(BobCompiler *c, int tkn);
+
+char *
+BobTokenName(int tkn);
+
+void
+BobParseError(BobCompiler *c, char *msg);
 
 #endif

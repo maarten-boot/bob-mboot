@@ -1,15 +1,108 @@
-define foo(x)
-{
-  for (i = 0; i < 100; ++i) {
+#! ./bin/bob
 
-    if ((i % 2) == 0)
-      continue;
+// comment
 
-    if (i < x)
-      stdout.Display(i, "\n");
-    else
-      break;
+define while_continue() {
+  i = 0;
+  while(i < 10) {
+    stdout.Display(i, "\n");
+    i++;
+    continue;
   }
 }
 
-foo(10);
+define for_continue() {
+  for(i = 0; i < 10; i++) {
+    stdout.Display(i, "\n");
+    continue;
+  }
+}
+
+define fibo_generator()
+{
+  local fibo_nm1 = 0;
+  local fibo_nm2 = 1;
+
+  return function () {
+    local fibo = fibo_nm1 + fibo_nm2;
+    fibo_nm2 = fibo_nm1;
+    fibo_nm1 = fibo;
+    return fibo;
+  };
+}
+
+define test_fibo()
+{
+  stdout.Display("Make two fibo generators\n");
+  fibo1 = fibo_generator();
+  fibo2 = fibo_generator();
+
+  stdout.Display("First pump 10 values from the fibo1 generator\n");
+  for (i = 0; i < 10; ++i) {
+    stdout.Display("fibo1 ", fibo1(), "\n");
+  }
+
+  stdout.Display("Now pump 5 values from the fibo2 generator\n");
+  for (i = 0; i < 5; ++i) {
+    stdout.Display("fibo2 ", fibo2(), "\n");
+  }
+
+  stdout.Display("Finally, resume pumping values from the fibo1 generator\n");
+  for (i = 0; i < 10; ++i) {
+    stdout.Display("fibo1 ", fibo1(), "\n");
+  }
+}
+
+z = new Object();
+
+define main()
+{
+  while_continue();
+  for_continue();
+  test_fibo();
+}
+
+main();
+
+// Cave
+Cave = new Object();
+
+define Cave.AddHazard(hazzard) {
+    print("add hazzard to cave\n");
+}
+
+# ///////////
+# // Hazard
+
+Hazard = new Object();
+
+define Hazard.initialize(cave) {
+    print("aa\n");
+    this.location = cave;
+    print("bb\n");
+    cave.AddHazard(this);
+    print("cc\n");
+
+    return this;
+}
+
+define Hazard.Move(cave) {
+    if (this.location != cave) {
+        this.location.RemoveHazard(this);
+
+        this.location = cave;
+        cave.AddHazard(this);
+    }
+
+    return this;
+}
+
+#//////////
+// Pit
+
+Pit = new Hazard;
+
+define Pit.Bump(game)
+{
+    game.Over("YYYIIIIEEEE . . . Fell in pit!");
+}
