@@ -2,62 +2,62 @@
 
 // testing continue in a while block
 define while_continue() {
-  i = 0;
+    i = 0;
 
-  while(i < 10) {
-    stdout.Display(i, "\n");
-    i++;
+    while(i < 10) {
+        stdout.Display(i, "\n");
+        i++;
 
-    continue;
-  }
+        continue;
+    }
 }
 
 // testing continue in a for block
 define for_continue() {
-  for(i = 0; i < 10; i++) {
-    stdout.Display(i, "\n");
+    for(i = 0; i < 10; i++) {
+        stdout.Display(i, "\n");
 
-    continue;
-  }
+        continue;
+    }
 }
 
 // testing lambda: from original example by dbetz
 define fibo_generator()
 {
-  local fibo_nm1 = 0;
-  local fibo_nm2 = 1;
+    local fibo_nm1 = 0;
+    local fibo_nm2 = 1;
 
-  return function () {
-    local fibo = fibo_nm1 + fibo_nm2;
+    return function () {
+        local fibo = fibo_nm1 + fibo_nm2;
 
-    fibo_nm2 = fibo_nm1;
-    fibo_nm1 = fibo;
+        fibo_nm2 = fibo_nm1;
+        fibo_nm1 = fibo;
 
-    return fibo;
-  };
+        return fibo;
+    };
 }
 
 define test_fibo()
 {
-  stdout.Display("Make two fibo generators\n");
+    stdout.Display("Make two fibo generators\n");
 
-  fibo1 = fibo_generator();
-  fibo2 = fibo_generator();
+    fibo1 = fibo_generator();
+    fibo2 = fibo_generator();
 
-  stdout.Display("First pump 10 values from the fibo1 generator\n");
-  for (i = 0; i < 10; ++i) {
-    stdout.Display("fibo1 ", fibo1(), "\n");
-  }
+    stdout.Display("First pump 10 values from the fibo1 generator\n");
+    for (i = 0; i < 10; ++i) {
+        stdout.Display("fibo1 ", fibo1(), "\n");
+    }
 
-  stdout.Display("Now pump 5 values from the fibo2 generator\n");
-  for (i = 0; i < 5; ++i) {
-    stdout.Display("fibo2 ", fibo2(), "\n");
-  }
+    stdout.Display("Now pump 5 values from the fibo2 generator\n");
+    for (i = 0; i < 5; ++i) {
+        stdout.Display("fibo2 ", fibo2(), "\n");
+    }
 
-  stdout.Display("Finally, resume pumping values from the fibo1 generator\n");
-  for (i = 0; i < 10; ++i) {
-    stdout.Display("fibo1 ", fibo1(), "\n");
-  }
+    stdout.Display("Finally, resume pumping values from the fibo1 generator\n");
+    for (i = 0; i < 10; ++i) {
+        stdout.Display("fibo1 ", fibo1(), "\n");
+    }
 }
 
 // testing object; not working yet
@@ -120,9 +120,9 @@ define Pit.Bump(game)
 // ues a main function as im used to that ;-)
 define main()
 {
-  while_continue();
-  for_continue();
-  test_fibo();
+    while_continue();
+    for_continue();
+    test_fibo();
 }
 
 main();
