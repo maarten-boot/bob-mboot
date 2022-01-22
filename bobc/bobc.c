@@ -75,7 +75,6 @@ CompileFile(BobInterpreter *c, char *iname, char *oname);
 static void
 Usage(void);
 
-
 /* space for interpreter */
 static char interpreterSpace[INTERPRETER_SIZE];
 static char compilerSpace[COMPILER_SIZE];
@@ -142,6 +141,7 @@ main(int argc, char **argv)
     BobUseEval(c, compilerSpace, sizeof(compilerSpace));
 
     /* process arguments */
+    // todo: add -v for verbose messages and a flag to show the compiled code
     for (i = 1; i < argc; ++i) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
@@ -188,6 +188,8 @@ CompileFile(BobInterpreter *c, char *inputName, char *outputName)
 
     /* determine the output filename */
     if (!outputName) {
+        // if we have no output file name,
+        // derive it from the input file and add .bbo at the end
         if ((p = strrchr(inputName, '.')) == NULL) {
             strcpy(oname, inputName);
         }
@@ -202,7 +204,9 @@ CompileFile(BobInterpreter *c, char *inputName, char *outputName)
     }
 
     /* compile the file */
+    // TODO: if verbose
     printf("Compiling '%s' -> '%s'\n", inputName, outputName);
+
     BobCompileFile(c, inputName, outputName);
 }
 

@@ -86,9 +86,12 @@ void
 BobDecodeProcedure(BobInterpreter *c, BobValue method, BobStream *stream)
 {
     BobValue code = BobMethodCode(method);
-    int      len, lc, n;
+    int      len;
+    int      lc;
+    int      n;
+
     len     = (int) BobStringSize(BobCompiledCodeBytecodes(code));
-    for (lc = 0; lc < len; lc += n) {
+        for (lc = 0; lc < len; lc += n) {
         n = BobDecodeInstruction(c, code, lc, stream);
     }
 }
@@ -100,7 +103,9 @@ BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream
     char          buf[100];
     BobValue      name;
     unsigned char *cp;
-    int           i, cnt, n = 1;
+    int           i;
+    int           cnt;
+    int           n = 1;
     OTDEF         *op;
 
     /* get bytecode pointer for this instruction and the method name */
@@ -111,30 +116,37 @@ BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream
     if (BobStringP(name)) {
         unsigned char *data = BobStringAddress(name);
         long          size  = BobStringSize(name);
+
         if (size > 32) {
             size = 32;
         }
+
         strncpy(buf, (char *) data, (size_t) size);
         sprintf(&buf[size], ":%04x %02x ", lc, *cp);
     }
     else {
         sprintf(buf, "%08lx:%04x %02x ", (long) code, lc, *cp);
     }
+
     BobStreamPutS(buf, stream);
 
     /* display the operands */
     for (op = otab; op->ot_name; ++op) {
         if (*cp == op->ot_code) {
             switch (op->ot_fmt) {
+
             case FMT_NONE:
                 sprintf(buf, "      %s\n", op->ot_name);
                 BobStreamPutS(buf, stream);
                 break;
+
             case FMT_BYTE:
                 sprintf(buf, "%02x    %s %02x\n", cp[1], op->ot_name, cp[1]);
                 BobStreamPutS(buf, stream);
                 n += 1;
                 break;
+
+
             case FMT_2BYTE:
                 sprintf(
                         buf, "%02x %02x %s %02x %02x\n", cp[1], cp[2], op->ot_name, cp[1], cp[2]
@@ -142,6 +154,7 @@ BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream
                 BobStreamPutS(buf, stream);
                 n += 2;
                 break;
+
             case FMT_WORD:
                 sprintf(
                         buf, "%02x %02x %s %02x%02x\n", cp[1], cp[2], op->ot_name, cp[2], cp[1]
@@ -149,6 +162,7 @@ BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream
                 BobStreamPutS(buf, stream);
                 n += 2;
                 break;
+
             case FMT_LIT:
                 sprintf(
                         buf, "%02x %02x %s %02x%02x ; ", cp[1], cp[2], op->ot_name, cp[2], cp[1]
@@ -158,6 +172,7 @@ BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream
                 BobStreamPutC('\n', stream);
                 n += 2;
                 break;
+
             case FMT_SWITCH:
                 sprintf(
                         buf, "%02x %02x %s %02x%02x\n", cp[1], cp[2], op->ot_name, cp[2], cp[1]
@@ -166,6 +181,7 @@ BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream
                 cnt = cp[2] << 8 | cp[1];
                 n += 2 + cnt * 4 + 2;
                 i   = 3;
+
                 while (--cnt >= 0) {
                     sprintf(buf, "                 %02x%02x %02x%02x ; ", cp[i + 1], cp[i], cp[i + 3], cp[i + 2]);
                     BobStreamPutS(buf, stream);
@@ -173,10 +189,12 @@ BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream
                     BobStreamPutC('\n', stream);
                     i += 4;
                 }
+
                 sprintf(buf, "                 %02x%02x\n", cp[i + 1], cp[i]);
                 BobStreamPutS(buf, stream);
                 break;
             }
+
             return n;
         }
     }

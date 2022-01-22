@@ -6,6 +6,8 @@
 
 #include "bob.h"
 
+// BIF means Fuild In Function
+
 /* method handlers */
 static BobValue
 BIF_Decode(BobInterpreter *c);
@@ -42,7 +44,9 @@ BIF_Decode(BobInterpreter *c)
 {
     BobStream *s = c->standardOutput;
     BobValue  obj;
+
     BobParseArguments(c, "V=*|P=", &obj, &BobMethodDispatch, &s, BobFileDispatch);
+
     if (BobCMethodP(obj)) {
         BobPrint(c, obj, s);
         BobStreamPutC('\n', s);
@@ -50,6 +54,7 @@ BIF_Decode(BobInterpreter *c)
     else {
         BobDecodeProcedure(c, obj, s);
     }
+
     return c->trueValue;
 }
 
@@ -57,23 +62,34 @@ BIF_Decode(BobInterpreter *c)
 static BobValue
 BIF_Apply(BobInterpreter *c)
 {
-    BobIntegerType i, vcnt, argc;
+    BobIntegerType i;
+    BobIntegerType vcnt;
+    BobIntegerType argc;
+
     BobValue       argv;
+
     BobCheckArgMin(c, 3);
     BobCheckType(c, 1, BobMethodP);
     BobCheckType(c, BobArgCnt(c), BobVectorP);
+
     argv = BobGetArg(c, BobArgCnt(c));
+
     if (BobMovedVectorP(argv)) {
         argv = BobVectorForwardingAddr(argv);
     }
+
     vcnt = BobVectorSizeI(argv);
     argc = BobArgCnt(c) + vcnt - 3;
+
     BobCheck(c, argc + 1);
     BobPush(c, BobGetArg(c, 1));
+
     for (i = 3; i < BobArgCnt(c); ++i)
         BobPush(c, BobGetArg(c, i));
+
     for (i = 0; i < vcnt; ++i)
         BobPush(c, BobVectorElementI(argv, i));
+
     return BobInternalCall(c, argc);
 }
 
@@ -280,4 +296,3 @@ BobMakeCompiledCode(BobInterpreter *c, long size, BobValue bytecodes)
     SetCompiledCodeBytecodes(code, BobPop(c));
     return code;
 }
-

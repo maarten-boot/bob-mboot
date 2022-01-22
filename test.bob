@@ -1,23 +1,27 @@
 #! ./bin/bob
 
-// comment
-
+// testing continue in a while block
 define while_continue() {
   i = 0;
+
   while(i < 10) {
     stdout.Display(i, "\n");
     i++;
+
     continue;
   }
 }
 
+// testing continue in a for block
 define for_continue() {
   for(i = 0; i < 10; i++) {
     stdout.Display(i, "\n");
+
     continue;
   }
 }
 
+// testing lambda: from original example by dbetz
 define fibo_generator()
 {
   local fibo_nm1 = 0;
@@ -25,8 +29,10 @@ define fibo_generator()
 
   return function () {
     local fibo = fibo_nm1 + fibo_nm2;
+
     fibo_nm2 = fibo_nm1;
     fibo_nm1 = fibo;
+
     return fibo;
   };
 }
@@ -34,6 +40,7 @@ define fibo_generator()
 define test_fibo()
 {
   stdout.Display("Make two fibo generators\n");
+
   fibo1 = fibo_generator();
   fibo2 = fibo_generator();
 
@@ -53,16 +60,8 @@ define test_fibo()
   }
 }
 
+// testing object; not working yet
 z = new Object();
-
-define main()
-{
-  while_continue();
-  for_continue();
-  test_fibo();
-}
-
-main();
 
 // Cave
 Cave = new Object();
@@ -76,13 +75,15 @@ define Cave.AddHazard(hazzard) {
 
 Hazard = new Object();
 
-define Hazard.initialize(cave) {
-    print("aa\n");
-    this.location = cave;
-    print("bb\n");
-    cave.AddHazard(this);
-    print("cc\n");
+define Hazard.SetLocationMutual(what) {
+    this.location = what;
+    what.AddHazard(this);
+}
 
+define Hazard.initialize(cave) {
+    this.SetLocationMutual(cave);
+    // this.location = cave;
+    // cave.AddHazard(this);
     return this;
 }
 
@@ -90,15 +91,21 @@ define Hazard.Move(cave) {
     if (this.location != cave) {
         this.location.RemoveHazard(this);
 
-        this.location = cave;
-        cave.AddHazard(this);
+        // this.location = cave;
+        // cave.AddHazard(this);
+        this.SetLocationMutual(cave);
     }
 
     return this;
 }
 
-#//////////
+//////////
 // Pit
+Game = new Object();
+
+define Game.Over(message) {
+    stdout.Display(message + "\n");
+}
 
 Pit = new Hazard;
 
@@ -106,3 +113,16 @@ define Pit.Bump(game)
 {
     game.Over("YYYIIIIEEEE . . . Fell in pit!");
 }
+
+///////////////////////////////////////////////
+///////////////////////////////////////////////
+
+// ues a main function as im used to that ;-)
+define main()
+{
+  while_continue();
+  for_continue();
+  test_fibo();
+}
+
+main();

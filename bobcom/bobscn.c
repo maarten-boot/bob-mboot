@@ -306,16 +306,21 @@ rtoken(BobCompiler *c)
 
         case '/':
             switch (ch = getch(c)) {
+
             case '=':
                 return T_DIVEQ;
+
             case '/':
+                /* handle // single single C++ style line comments */
                 while ((ch = getch(c)) != EOF) {
                     if (ch == '\n') {
                         break;
                     }
                 }
                 break;
+
             case '*':
+                /* handle multi line C comments here */
                 ch          = ch2 = EOF;
                 for (; (ch2 = getch(c)) != EOF; ch = ch2) {
                     if (ch == '*' && ch2 == '/') {
@@ -323,10 +328,12 @@ rtoken(BobCompiler *c)
                     }
                 }
                 break;
+
             default:
                 c->savedChar = ch;
                 return '/';
             }
+
             break;
 
         case '.':

@@ -407,7 +407,8 @@ BobCompileExpr(BobInterpreter *ic)
     code = BobMakeMethod(ic, code, ic->nilValue);
 
     /* return the function */
-    BobDecodeProcedure(ic, code, ic->standardOutput);
+    // TODO: if debug
+    // BobDecodeProcedure(ic, code, ic->standardOutput);
     BobPopUnwindTarget(ic);
 
     return code;
@@ -643,8 +644,10 @@ compile_code(BobCompiler *c, char *name)
                 putcbyte(c, BobOpARGSGE);
                 putcbyte(c, cnt);
                 putcbyte(c, BobOpBRT);
+
                 nxt = putcword(c, 0);
                 do_init_expr(c);
+
                 AddArgument(c, c->arguments, id);
                 putcbyte(c, BobOpESET);
                 putcbyte(c, 0);
@@ -689,6 +692,7 @@ compile_code(BobCompiler *c, char *name)
 
     /* make the literal vector */
     size = c->lptr - c->lbase;
+
     code = BobMakeCompiledCode(ic, BobFirstLiteral + size, code);
     src  = BobVectorAddress(c->literalbuf) + c->lbase;
     dst  = BobCompiledCodeLiterals(code) + BobFirstLiteral;
@@ -736,8 +740,10 @@ do_if(BobCompiler *c)
     if ((tkn = BobToken(c)) == T_ELSE) {
         putcbyte(c, BobOpBR);
         end = putcword(c, NIL);
+
         fixup(c, nxt, codeaddr(c));
         do_statement(c);
+
         nxt = end;
     }
     else {

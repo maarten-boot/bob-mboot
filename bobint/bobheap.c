@@ -182,6 +182,7 @@ BobAllocate(BobInterpreter *c, long size)
 
     /* insufficient memory */
     BobInsufficientMemory(c);
+
     return c->nilValue; /* never reached */
 }
 
@@ -229,8 +230,10 @@ BobCollectGarbage(BobInterpreter *c)
     BobDispatch      *d;
     BobValue         obj;
 
-    BobStreamPutS("[GC", c->standardError);
-
+    // if verbose
+    if(0) {
+        BobStreamPutS("[GC", c->standardError);
+    }
     /* reverse the memory spaces */
     ms = c->oldSpace;
     c->oldSpace = c->newSpace;
@@ -250,6 +253,7 @@ BobCollectGarbage(BobInterpreter *c)
     c->symbolObject  = BobCopyValue(c, c->symbolObject);
     c->stringObject  = BobCopyValue(c, c->stringObject);
     c->integerObject = BobCopyValue(c, c->integerObject);
+
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
     c->floatObject = BobCopyValue(c, c->floatObject);
 #endif
@@ -263,8 +267,10 @@ BobCollectGarbage(BobInterpreter *c)
 
     /* copy protected pointers */
     for (ppb = c->protectedPtrs; ppb != NULL; ppb = ppb->next) {
+
         BobValue **pp  = ppb->pointers;
         int      count = ppb->count;
+
         for (; --count >= 0; ++pp) {
             **pp = BobCopyValue(c, **pp);
         }
@@ -289,13 +295,16 @@ BobCollectGarbage(BobInterpreter *c)
 
     /* scan and copy until all accessible objects have been copied */
     scan = c->newSpace->base;
+
     while (scan < c->newSpace->free) {
         obj = (BobValue) scan;
+
 #if 0
         BobStreamPutS("Scanning ",c->standardOutput);
         BobPrint(c,obj,c->standardOutput);
         BobStreamPutC('\n',c->standardOutput);
 #endif
+
         scan += ValueSize(obj);
         ScanValue(c, obj);
     }
@@ -310,12 +319,16 @@ BobCollectGarbage(BobInterpreter *c)
     /* count the garbage collections */
     ++c->gcCount;
 
-    {
+    // add verbose switch
+    if(0) {
         char buf[128];
+
         sprintf(
-                buf, " - %lu bytes free out of %lu, collections %lu]\n", (unsigned long) (c->newSpace->top -
-                                                                                          c->newSpace->free)
-                , (unsigned long) (c->newSpace->top - c->newSpace->base), (unsigned long) c->gcCount
+                buf,
+                " - %lu bytes free out of %lu, collections %lu]\n",
+                (unsigned long) (c->newSpace->top - c->newSpace->free),
+                (unsigned long) (c->newSpace->top - c->newSpace->base),
+                (unsigned long) c->gcCount
         );
         BobStreamPutS(buf, c->standardError);
     }
@@ -338,9 +351,12 @@ BobDumpHeap(BobInterpreter *c)
     while (scan < c->newSpace->free) {
         BobValue val = (BobValue) scan;
         scan += ValueSize(val);
+
         //if (BobCObjectP(val)) {
+
         BobPrint(c, val, c->standardOutput);
         BobStreamPutC('\n', c->standardOutput);
+
         //}
     }
 }
@@ -366,6 +382,7 @@ BobValue
 BobDefaultNewInstance(BobInterpreter *c, BobValue parent)
 {
     BobCallErrorHandler(c, BobErrNewInstance, parent);
+
     return c->nilValue; /* never reached */
 }
 
@@ -374,7 +391,9 @@ int
 BobDefaultPrint(BobInterpreter *c, BobValue obj, BobStream *s)
 {
     char buf[64];
+
     sprintf(buf, "%08lx", (long) obj);
+
     return BobStreamPutC('<', s) == '<'
            && BobStreamPutS(BobTypeName(obj), s) == 0
            && BobStreamPutC('-', s) == '-'
@@ -524,7 +543,10 @@ BobAlloc(BobInterpreter *c, unsigned long size)
         *p++ = totalSize;
         c->totalMemory += totalSize;
         ++c->allocCount;
-        printf("BobAlloc %lu %lu\n", size, totalAlloc);
+
+        // if verbose or printd stderr
+        // printf("BobAlloc %lu %lu\n", size, totalAlloc);
+
         totalAlloc += size;
     }
     return (void *) p;

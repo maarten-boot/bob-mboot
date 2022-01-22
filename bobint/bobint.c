@@ -212,21 +212,28 @@ Execute(BobInterpreter *c)
         long         n;
         int          i;
 
-        //BobDecodeInstruction(c,c->code,c->pc - c->cbase,c->standardOutput);
+        // todo add -d debug flag
+        // BobDecodeInstruction(c,c->code,c->pc - c->cbase,c->standardOutput);
+
         switch (*c->pc++) {
+
         case BobOpCALL:
             Call(c, &BobCallCDispatch, *c->pc++);
             break;
+
         case BobOpSEND:
             Send(c, &BobCallCDispatch, *c->pc++);
             break;
+
         case BobOpRETURN:
         case BobOpUNFRAME:
             (*c->fp->dispatch->restore)(c);
             break;
+
         case BobOpFRAME:
             PushFrame(c, *c->pc++);
             break;
+
         case BobOpCFRAME:
             i = *c->pc++;
             BobCheck(c, i);
@@ -234,18 +241,22 @@ Execute(BobInterpreter *c)
                 BobPush(c, c->nilValue);
             PushFrame(c, i);
             break;
+
         case BobOpAFRAME:       /* handled by BobOpCALL */
         case BobOpAFRAMER:
             BadOpcode(c, c->pc[-1]);
             break;
+
         case BobOpARGSGE:
             i = *c->pc++;
             c->val = BobToBoolean(c, c->argc >= i);
             break;
+
         case BobOpCLOSE:
             c->env = UnstackEnv(c, c->env);
             c->val = BobMakeMethod(c, c->val, c->env);
             break;
+
         case BobOpEREF:
             i       = *c->pc++;
             for (p2 = c->env; --i >= 0;) {
@@ -254,6 +265,7 @@ Execute(BobInterpreter *c)
             i       = BobEnvSize(p2) - *c->pc++;
             c->val = BobEnvElement(p2, i);
             break;
+
         case BobOpESET:
             i       = *c->pc++;
             for (p2 = c->env; --i >= 0;) {
@@ -262,6 +274,7 @@ Execute(BobInterpreter *c)
             i       = BobEnvSize(p2) - *c->pc++;
             BobSetEnvElement(p2, i, c->val);
             break;
+
         case BobOpBRT:
             off = *c->pc++;
             off |= *c->pc++ << 8;
@@ -269,6 +282,7 @@ Execute(BobInterpreter *c)
                 c->pc = c->cbase + off;
             }
             break;
+
         case BobOpBRF:
             off = *c->pc++;
             off |= *c->pc++ << 8;
@@ -276,11 +290,13 @@ Execute(BobInterpreter *c)
                 c->pc = c->cbase + off;
             }
             break;
+
         case BobOpBR:
             off = *c->pc++;
             off |= *c->pc++ << 8;
             c->pc = c->cbase + off;
             break;
+
         case BobOpSWITCH:
             i = *c->pc++;
             i |= *c->pc++ << 8;
@@ -296,21 +312,27 @@ Execute(BobInterpreter *c)
             off |= *c->pc++ << 8;
             c->pc = c->cbase + off;
             break;
+
         case BobOpT:
             c->val = c->trueValue;
             break;
+
         case BobOpNIL:
             c->val = c->nilValue;
             break;
+
         case BobOpPUSH:
             BobCPush(c, c->val);
             break;
+
         case BobOpNOT:
             c->val = BobToBoolean(c, !BobTrueP(c, c->val));
             break;
+
         case BobOpNEG:
             UnaryOp(c, '-');
             break;
+
         case BobOpADD:
             if (BobStringP(c->val)) {
                 p1 = BobPop(c);
@@ -323,87 +345,110 @@ Execute(BobInterpreter *c)
                 BinaryOp(c, '+');
             }
             break;
+
         case BobOpSUB:
             BinaryOp(c, '-');
             break;
+
         case BobOpMUL:
             BinaryOp(c, '*');
             break;
+
         case BobOpDIV:
             BinaryOp(c, '/');
             break;
+
         case BobOpREM:
             BinaryOp(c, '%');
             break;
+
         case BobOpINC:
             UnaryOp(c, 'I');
             break;
+
         case BobOpDEC:
             UnaryOp(c, 'D');
             break;
+
         case BobOpBAND:
             BinaryOp(c, '&');
             break;
+
         case BobOpBOR:
             BinaryOp(c, '|');
             break;
+
         case BobOpXOR:
             BinaryOp(c, '^');
             break;
+
         case BobOpBNOT:
             UnaryOp(c, '~');
             break;
+
         case BobOpSHL:
             BinaryOp(c, 'L');
             break;
+
         case BobOpSHR:
             BinaryOp(c, 'R');
             break;
+
         case BobOpLT:
             p1 = BobPop(c);
             c->val = BobToBoolean(c, CompareObjects(c, p1, c->val) < 0);
             break;
+
         case BobOpLE:
             p1 = BobPop(c);
             c->val = BobToBoolean(c, CompareObjects(c, p1, c->val) <= 0);
             break;
+
         case BobOpEQ:
             p1 = BobPop(c);
             c->val = BobToBoolean(c, BobEql(p1, c->val));
             break;
+
         case BobOpNE:
             p1 = BobPop(c);
             c->val = BobToBoolean(c, !BobEql(p1, c->val));
             break;
+
         case BobOpGE:
             p1 = BobPop(c);
             c->val = BobToBoolean(c, CompareObjects(c, p1, c->val) >= 0);
             break;
+
         case BobOpGT:
             p1 = BobPop(c);
             c->val = BobToBoolean(c, CompareObjects(c, p1, c->val) > 0);
             break;
+
         case BobOpLIT:
             off = *c->pc++;
             off |= *c->pc++ << 8;
             c->val = BobCompiledCodeLiteral(c->code, off);
             break;
+
         case BobOpGREF:
             off = *c->pc++;
             off |= *c->pc++ << 8;
             c->val = BobGlobalValue(BobCompiledCodeLiteral(c->code, off));
             break;
+
         case BobOpGSET:
             off = *c->pc++;
             off |= *c->pc++ << 8;
             BobSetGlobalValue(BobCompiledCodeLiteral(c->code, off), c->val);
             break;
+
         case BobOpGETP:
             p1 = BobPop(c);
             if (!BobGetProperty(c, p1, c->val, &c->val)) {
                 BobCallErrorHandler(c, BobErrNoProperty, p1, c->val);
             }
             break;
+
         case BobOpSETP:
             p2 = BobPop(c);
             p1 = BobPop(c);
@@ -411,12 +456,14 @@ Execute(BobInterpreter *c)
                 BobCallErrorHandler(c, BobErrNoProperty, p1, p2);
             }
             break;
+
         case BobOpVREF:
             p1 = BobPop(c);
             if (!BobGetProperty(c, p1, c->val, &c->val)) {
                 BobCallErrorHandler(c, BobErrNoProperty, p1, c->val);
             }
             break;
+
         case BobOpVSET:
             p2 = BobPop(c);
             p1 = BobPop(c);
@@ -424,28 +471,34 @@ Execute(BobInterpreter *c)
                 BobCallErrorHandler(c, BobErrNoProperty, p1, c->val);
             }
             break;
+
         case BobOpDUP2:
             BobCheck(c, 2);
             c->sp -= 2;
             c->sp[1] = c->val;
             BobSetTop(c, c->sp[2]);
             break;
+
         case BobOpDROP:
             c->val = BobPop(c);
             break;
+
         case BobOpDUP:
             BobCheck(c, 1);
             c->sp -= 1;
             BobSetTop(c, c->sp[1]);
             break;
+
         case BobOpOVER:
             BobCheck(c, 1);
             c->sp -= 1;
             BobSetTop(c, c->sp[2]);
             break;
+
         case BobOpNEWOBJECT:
             c->val = BobNewInstance(c, c->val);
             break;
+
         case BobOpNEWVECTOR:
             if (!BobIntegerP(c->val)) {
                 BobTypeError(c, c->val);
@@ -457,6 +510,7 @@ Execute(BobInterpreter *c)
                 *--p = BobPop(c);
             }
             break;
+
         default:
             BadOpcode(c, c->pc[-1]);
             break;
@@ -473,22 +527,29 @@ UnaryOp(BobInterpreter *c, int op)
     if (BobIntegerP(p1)) {
         BobIntegerType i1 = BobIntegerValue(p1);
         BobIntegerType ival;
+
         switch (op) {
+
         case '+':
             ival = i1;
             break;
+
         case '-':
             ival = -i1;
             break;
+
         case '~':
             ival = ~i1;
             break;
+
         case 'I':
             ival = i1 + 1;
             break;
+
         case 'D':
             ival = i1 - 1;
             break;
+
         default:
             ival = 0; /* never reached */
             break;
@@ -500,23 +561,31 @@ UnaryOp(BobInterpreter *c, int op)
     else if (BobFloatP(p1)) {
         BobFloatType f1 = BobFloatValue(p1);
         BobFloatType fval;
+
         switch (op) {
+
         case '+':
             fval = f1;
             break;
+
         case '-':
             fval = -f1;
             break;
+
         case 'I':
             fval = f1 + 1;
             break;
+
         case 'D':
             fval = f1 - 1;
             break;
+
         case '~':
             BobTypeError(c, p1);
             /* fall through */
+
         default:
+            // TODO: looks diffdrent from the non fload and is reached if falling through ????
             fval = 0.0; /* never reached */
             break;
         }
@@ -537,41 +606,53 @@ BinaryOp(BobInterpreter *c, int op)
     BobValue p2 = c->val;
 
     if (BobIntegerP(p1) && BobIntegerP(p2)) {
+
         BobIntegerType i1 = BobIntegerValue(p1);
         BobIntegerType i2 = BobIntegerValue(p2);
         BobIntegerType ival;
 
         switch (op) {
+
         case '+':
             ival = i1 + i2;
             break;
+
         case '-':
             ival = i1 - i2;
             break;
+
         case '*':
             ival = i1 * i2;
             break;
+
         case '/':
             ival = i2 == 0 ? 0 : i1 / i2;
             break;
+
         case '%':
             ival = i2 == 0 ? 0 : i1 % i2;
             break;
+
         case '&':
             ival = i1 & i2;
             break;
+
         case '|':
             ival = i1 | i2;
             break;
+
         case '^':
             ival = i1 ^ i2;
             break;
+
         case 'L':
             ival = i1 << i2;
             break;
+
         case 'R':
             ival = i1 >> i2;
             break;
+
         default:
             ival = 0; /* never reached */
             break;
@@ -580,7 +661,10 @@ BinaryOp(BobInterpreter *c, int op)
     }
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
     else {
-        BobFloatType f1, f2, fval;
+        BobFloatType f1;
+        BobFloatType f2;
+        BobFloatType fval;
+
         if (BobFloatP(p1)) {
             f1 = BobFloatValue(p1);
         }
@@ -591,6 +675,7 @@ BinaryOp(BobInterpreter *c, int op)
             BobTypeError(c, p1);
             f1 = 0.0; /* never reached */
         }
+
         if (BobFloatP(p2)) {
             f2 = BobFloatValue(p2);
         }
@@ -601,6 +686,7 @@ BinaryOp(BobInterpreter *c, int op)
             BobTypeError(c, p2);
             f2 = 0.0; /* never reached */
         }
+
         switch (op) {
 
         case '+':
@@ -633,6 +719,7 @@ BinaryOp(BobInterpreter *c, int op)
             fval = 0.0; /* never reached */
             break;
         }
+
         c->val = BobMakeFloat(c, fval);
     }
 #else
@@ -652,11 +739,14 @@ BobInternalSend(BobInterpreter *c, int argc)
 
     /* setup the unwind target */
     BobPushUnwindTarget(c, &target);
+
     if ((sts = BobUnwindCatch(c)) != 0) {
         switch (sts) {
+
         case itReturn:
             BobPopUnwindTarget(c);
             return c->val;
+
         case itAbort:
             BobPopAndUnwind(c, sts);
         }
@@ -670,6 +760,7 @@ BobInternalSend(BobInterpreter *c, int argc)
 
     /* execute the function code */
     Execute(c);
+
     return 0; /* never reached */
 }
 
@@ -712,11 +803,14 @@ BobInternalCall(BobInterpreter *c, int argc)
 
     /* setup the unwind target */
     BobPushUnwindTarget(c, &target);
+
     if ((sts = BobUnwindCatch(c)) != 0) {
         switch (sts) {
+
         case itReturn:
             BobPopUnwindTarget(c);
             return c->val;
+
         case itAbort:
             BobPopAndUnwind(c, sts);
         }
@@ -725,11 +819,13 @@ BobInternalCall(BobInterpreter *c, int argc)
     /* setup the call */
     if (Call(c, &BobTopCDispatch, argc)) {
         BobPopUnwindTarget(c);
+
         return c->val;
     }
 
     /* execute the function code */
     Execute(c);
+
     return 0; /* never reached */
 }
 
@@ -737,7 +833,12 @@ BobInternalCall(BobInterpreter *c, int argc)
 static int
 Call(BobInterpreter *c, FrameDispatch *d, int argc)
 {
-    int           rflag, rargc, oargc, targc, n;
+    int           rflag;
+    int           rargc;
+    int           oargc;
+    int           targc;
+    int           n;
+
     BobValue      method  = c->sp[argc];
     unsigned char *cbase, *pc;
     int           oldArgC = c->argc;
@@ -752,11 +853,11 @@ Call(BobInterpreter *c, FrameDispatch *d, int argc)
     if (BobCMethodP(method)) {
         c->val = (*BobCMethodHandler(method))(c);
         BobDrop(c, argc + 1);
+
         return TRUE;
     }
-
-        /* otherwise, it had better be a bytecode method */
     else if (!BobMethodP(method)) {
+        /* otherwise, it had better be a bytecode method */
         BobTypeError(c, method);
     }
 
@@ -781,22 +882,28 @@ Call(BobInterpreter *c, FrameDispatch *d, int argc)
     /* fill out the optional arguments */
     if ((n = targc - argc) > 0) {
         BobCheck(c, n);
-        while (--n >= 0)
+
+        while (--n >= 0) {
             BobPush(c, c->nilValue);
+        }
     }
 
     /* build the rest argument */
     if (rflag) {
         BobValue value, *p;
         int      rcnt;
+
         if ((rcnt = argc - targc) < 0) {
             rcnt = 0;
         }
+
         value     = BobMakeVector(c, rcnt);
         p         = BobVectorAddressI(value) + rcnt;
+
         while (--rcnt >= 0) {
             *--p = BobPop(c);
         }
+
         BobCPush(c, value);
         ++targc;
     }
@@ -816,6 +923,7 @@ Call(BobInterpreter *c, FrameDispatch *d, int argc)
     frame->code         = c->code;
     frame->pcOffset     = c->pc - c->cbase;
     frame->argc         = oldArgC;
+
     BobSetDispatch(&frame->stackEnv, &BobStackEnvironmentDispatch);
     BobSetEnvSize(&frame->stackEnv, BobFirstEnvElement + targc);
 
@@ -838,6 +946,7 @@ static void
 TopRestore(BobInterpreter *c)
 {
     CallRestore(c);
+
     BobUnwind(c, itReturn);
 }
 
@@ -851,10 +960,12 @@ CallRestore(BobInterpreter *c)
     /* restore the previous frame */
     c->fp        = frame->hdr.next;
     c->env       = frame->env;
+
     if ((c->code = frame->code) != NULL) {
         c->cbase = BobStringAddress(BobCompiledCodeBytecodes(c->code));
         c->pc    = c->cbase + frame->pcOffset;
     }
+
     c->argc      = frame->argc;
 
     /* fixup moved environments */
@@ -864,6 +975,7 @@ CallRestore(BobInterpreter *c)
 
     /* reset the stack pointer */
     c->sp = (BobValue *) frame;
+
     BobDrop(c, WordSize(sizeof(CallFrame)) + BobEnvSize(env) + 1);
 }
 
@@ -875,10 +987,13 @@ CallCopy(BobInterpreter *c, BobFrame *frame)
     BobValue       env   = (BobValue) &call->stackEnv;
     BobValue       *data = BobEnvAddress(env);
     BobIntegerType count = BobEnvSize(env);
+
     call->env = BobCopyValue(c, call->env);
+
     if (call->code) {
         call->code = BobCopyValue(c, call->code);
     }
+
     if (BobStackEnvironmentP(env)) {
         while (--count >= 0) {
             *data = BobCopyValue(c, *data);
@@ -888,6 +1003,7 @@ CallCopy(BobInterpreter *c, BobFrame *frame)
     else {
         data += count;
     }
+
     return data;
 }
 
@@ -909,6 +1025,7 @@ PushFrame(BobInterpreter *c, int size)
     frame->hdr.dispatch = &BobBlockCDispatch;
     frame->hdr.next     = c->fp;
     frame->env          = c->env;
+
     BobSetDispatch(&frame->stackEnv, &BobStackEnvironmentDispatch);
     BobSetEnvSize(&frame->stackEnv, BobFirstEnvElement + size);
 
@@ -935,6 +1052,7 @@ BlockRestore(BobInterpreter *c)
 
     /* reset the stack pointer */
     c->sp = (BobValue *) frame;
+
     BobDrop(c, WordSize(sizeof(BlockFrame)) + BobEnvSize(&frame->stackEnv));
 }
 
@@ -946,7 +1064,9 @@ BlockCopy(BobInterpreter *c, BobFrame *frame)
     BobValue       env    = (BobValue) &block->stackEnv;
     BobValue       *data  = BobEnvAddress(env);
     BobIntegerType count  = BobEnvSize(env);
+
     block->env = BobCopyValue(c, block->env);
+
     if (BobStackEnvironmentP(env)) {
         while (--count >= 0) {
             *data = BobCopyValue(c, *data);
@@ -956,6 +1076,7 @@ BlockCopy(BobInterpreter *c, BobFrame *frame)
     else {
         data += count;
     }
+
     return data;
 }
 
