@@ -130,7 +130,7 @@ $(BINDIR)/bobmerge:	$(BOBMERGE_OBJS)
 $(BOBMERGE_OBJS):	$(OBJDIR)%.o:	util%.c $(HDRS)
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BOBFILES): test.bob
+$(BOBFILES): test.bob test.bbo
 
 clean:	$(DIRS)
 	rm -rf $(BINDIR)
@@ -140,5 +140,6 @@ clean:	$(DIRS)
 # test direct and compile , interpreter
 test: $(BOBFILES)
 	./bin/bob test.bob
-	./bin/bobc -o test test.bob
+	./bin/bobc -o test.bbo test.bob
 	./bin/bobi test.bbo
+	rm test.bbo
