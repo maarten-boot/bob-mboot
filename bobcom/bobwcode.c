@@ -62,7 +62,7 @@ WriteFloat(BobFloatType n, BobStream *s);
 /* BobCompileFile - read and compile expressions from a file */
 int
 BobCompileFile(BobInterpreter *c, char *iname, char *oname)
-{
+{ F_ENTER;
     BobUnwindTarget target;
     BobStream       *is;
     BobStream       *os;
@@ -116,7 +116,7 @@ BobCompileFile(BobInterpreter *c, char *iname, char *oname)
 /* BobCompileString - read and compile an expression from a string */
 int
 BobCompileString(BobInterpreter *c, char *str, BobStream *os)
-{
+{ F_ENTER;
     BobStream *is;
     int       sts;
 
@@ -133,7 +133,7 @@ BobCompileString(BobInterpreter *c, char *str, BobStream *os)
 /* BobCompileStream - read and compile an expression from a stream */
 int
 BobCompileStream(BobInterpreter *c, BobStream *is, BobStream *os)
-{
+{ F_ENTER;
     BobValue expr;
 
     /* initialize the scanner */
@@ -154,7 +154,7 @@ BobCompileStream(BobInterpreter *c, BobStream *is, BobStream *os)
 /* WriteHeader - write an object file header */
 static int
 WriteHeader(BobInterpreter *c, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC('B', s) != BobStreamEOF
            && BobStreamPutC('O', s) != BobStreamEOF
            && BobStreamPutC('B', s) != BobStreamEOF
@@ -165,14 +165,14 @@ WriteHeader(BobInterpreter *c, BobStream *s)
 /* WriteMethod - write a method to a fasl file */
 static int
 WriteMethod(BobInterpreter *c, BobValue method, BobStream *s)
-{
+{ F_ENTER;
     return WriteCodeValue(c, BobMethodCode(method), s);
 }
 
 /* WriteValue - write a value */
 static int
 WriteValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     if (v == c->nilValue) {
         return BobStreamPutC(BobFaslTagNil, s) != BobStreamEOF;
     }
@@ -208,7 +208,7 @@ WriteValue(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteCodeValue - write a code value */
 static int
 WriteCodeValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC(BobFaslTagCode, s) != BobStreamEOF
            && WriteVector(c, v, s);
 }
@@ -216,7 +216,7 @@ WriteCodeValue(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteVectorValue - write a vector value */
 static int
 WriteVectorValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC(BobFaslTagVector, s) != BobStreamEOF
            && WriteVector(c, v, s);
 }
@@ -224,7 +224,7 @@ WriteVectorValue(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteObjectValue - write an object value */
 static int
 WriteObjectValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     BobValue p;
 
     /* write the type tag, class and object size */
@@ -265,7 +265,7 @@ WriteObjectValue(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteSymbolValue - write a symbol value */
 static int
 WriteSymbolValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC(BobFaslTagSymbol, s) != BobStreamEOF
            && WriteString(BobSymbolPrintName(v), BobSymbolPrintNameLength(v), s);
 }
@@ -273,7 +273,7 @@ WriteSymbolValue(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteStringValue - write a string value */
 static int
 WriteStringValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC(BobFaslTagString, s) != BobStreamEOF
            && WriteString(BobStringAddress(v), BobStringSize(v), s);
 }
@@ -281,7 +281,7 @@ WriteStringValue(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteIntegerValue - write an integer value */
 static int
 WriteIntegerValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC(BobFaslTagInteger, s) != BobStreamEOF
            && WriteInteger(BobIntegerValue(v), s);
 }
@@ -291,7 +291,7 @@ WriteIntegerValue(BobInterpreter *c, BobValue v, BobStream *s)
 
 static int
 WriteFloatValue(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC(BobFaslTagFloat, s) != BobStreamEOF
            && WriteFloat(BobFloatValue(v), s);
 }
@@ -301,7 +301,7 @@ WriteFloatValue(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteVector - write a vector value */
 static int
 WriteVector(BobInterpreter *c, BobValue v, BobStream *s)
-{
+{ F_ENTER;
     BobIntegerType size = BobBasicVectorSize(v);
     BobValue       *p   = BobBasicVectorAddress(v);
 
@@ -321,7 +321,7 @@ WriteVector(BobInterpreter *c, BobValue v, BobStream *s)
 /* WriteString - write a string value */
 static int
 WriteString(unsigned char *str, BobIntegerType size, BobStream *s)
-{
+{ F_ENTER;
     if (!WriteInteger(size, s)) {
         return FALSE;
     }
@@ -338,7 +338,7 @@ WriteString(unsigned char *str, BobIntegerType size, BobStream *s)
 /* WriteInteger - write an integer value */
 static int
 WriteInteger(BobIntegerType n, BobStream *s)
-{
+{ F_ENTER;
     return BobStreamPutC((int) (n >> 24), s) != BobStreamEOF
            && BobStreamPutC((int) (n >> 16), s) != BobStreamEOF
            && BobStreamPutC((int) (n >> 8), s) != BobStreamEOF
@@ -350,7 +350,7 @@ WriteInteger(BobIntegerType n, BobStream *s)
 
 static int
 WriteFloat(BobFloatType n, BobStream *s)
-{
+{ F_ENTER;
     int count = sizeof(BobFloatType);
 
 #ifdef BOB_REVERSE_FLOATS_ON_WRITE

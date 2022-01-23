@@ -1,0 +1,219 @@
+./bin/bob -v -d test.bob
+Loading 'test.bob'
+0810880a:0000 31 02 00 AFRAME 02 00
+0810880a:0003 19 02 00 LIT 0002 ; <CompiledCode-while_continue>
+0810880a:0006 33       CLOSE
+0810880a:0007 1b 03 00 GSET 0003 ; while_continue
+0810880a:000a 1e       RETURN
+<Method-while_continue>
+0810891e:0000 31 02 00 AFRAME 02 00
+0810891e:0003 19 02 00 LIT 0002 ; <CompiledCode-for_continue>
+0810891e:0006 33       CLOSE
+0810891e:0007 1b 03 00 GSET 0003 ; for_continue
+0810891e:000a 1e       RETURN
+<Method-for_continue>
+08108a36:0000 31 02 00 AFRAME 02 00
+08108a36:0003 19 02 00 LIT 0002 ; <CompiledCode-fibo_generator>
+08108a36:0006 33       CLOSE
+08108a36:0007 1b 03 00 GSET 0003 ; fibo_generator
+08108a36:000a 1e       RETURN
+<Method-fibo_generator>
+08108d9e:0000 31 02 00 AFRAME 02 00
+08108d9e:0003 19 02 00 LIT 0002 ; <CompiledCode-test_fibo>
+08108d9e:0006 33       CLOSE
+08108d9e:0007 1b 03 00 GSET 0003 ; test_fibo
+08108d9e:000a 1e       RETURN
+<Method-test_fibo>
+08108e1a:0000 31 02 00 AFRAME 02 00
+08108e1a:0003 1a 03 00 GREF 0003 ; Object
+08108e1a:0006 2e       NEWOBJECT
+08108e1a:0007 06       PUSH
+08108e1a:0008 19 04 00 LIT 0004 ; initialize
+08108e1a:000b 06       PUSH
+08108e1a:000c 2d       OVER
+08108e1a:000d 20 02    SEND 02
+08108e1a:000f 1b 02 00 GSET 0002 ; z
+08108e1a:0012 1e       RETURN
+<Object-08108e42>
+08108e8a:0000 31 02 00 AFRAME 02 00
+08108e8a:0003 1a 03 00 GREF 0003 ; Object
+08108e8a:0006 2e       NEWOBJECT
+08108e8a:0007 06       PUSH
+08108e8a:0008 19 04 00 LIT 0004 ; initialize
+08108e8a:000b 06       PUSH
+08108e8a:000c 2d       OVER
+08108e8a:000d 20 02    SEND 02
+08108e8a:000f 1b 02 00 GSET 0002 ; Cave
+08108e8a:0012 1e       RETURN
+<Object-08108eb2>
+08108f82:0000 31 02 00 AFRAME 02 00
+08108f82:0003 1a 02 00 GREF 0002 ; Cave
+08108f82:0006 06       PUSH
+08108f82:0007 19 03 00 LIT 0003 ; AddHazard
+08108f82:000a 06       PUSH
+08108f82:000b 19 04 00 LIT 0004 ; <CompiledCode-AddHazard>
+08108f82:000e 33       CLOSE
+08108f82:000f 1d       SETP
+08108f82:0010 1e       RETURN
+<Method-AddHazard>
+0810901a:0000 31 02 00 AFRAME 02 00
+0810901a:0003 1a 03 00 GREF 0003 ; Object
+0810901a:0006 2e       NEWOBJECT
+0810901a:0007 06       PUSH
+0810901a:0008 19 04 00 LIT 0004 ; initialize
+0810901a:000b 06       PUSH
+0810901a:000c 2d       OVER
+0810901a:000d 20 02    SEND 02
+0810901a:000f 1b 02 00 GSET 0002 ; Hazard
+0810901a:0012 1e       RETURN
+<Object-08109042>
+08109112:0000 31 02 00 AFRAME 02 00
+08109112:0003 1a 02 00 GREF 0002 ; Hazard
+08109112:0006 06       PUSH
+08109112:0007 19 03 00 LIT 0003 ; SetLocationMutual
+08109112:000a 06       PUSH
+08109112:000b 19 04 00 LIT 0004 ; <CompiledCode-SetLocationMutual>
+08109112:000e 33       CLOSE
+08109112:000f 1d       SETP
+08109112:0010 1e       RETURN
+<Method-SetLocationMutual>
+081091d2:0000 31 02 00 AFRAME 02 00
+081091d2:0003 1a 02 00 GREF 0002 ; Hazard
+081091d2:0006 06       PUSH
+081091d2:0007 19 03 00 LIT 0003 ; initialize
+081091d2:000a 06       PUSH
+081091d2:000b 19 04 00 LIT 0004 ; <CompiledCode-initialize>
+081091d2:000e 33       CLOSE
+081091d2:000f 1d       SETP
+081091d2:0010 1e       RETURN
+<Method-initialize>
+081092fa:0000 31 02 00 AFRAME 02 00
+081092fa:0003 1a 02 00 GREF 0002 ; Hazard
+081092fa:0006 06       PUSH
+081092fa:0007 19 03 00 LIT 0003 ; Move
+081092fa:000a 06       PUSH
+081092fa:000b 19 04 00 LIT 0004 ; <CompiledCode-Move>
+081092fa:000e 33       CLOSE
+081092fa:000f 1d       SETP
+081092fa:0010 1e       RETURN
+<Method-Move>
+0810938e:0000 31 02 00 AFRAME 02 00
+0810938e:0003 1a 03 00 GREF 0003 ; Object
+0810938e:0006 2e       NEWOBJECT
+0810938e:0007 06       PUSH
+0810938e:0008 19 04 00 LIT 0004 ; initialize
+0810938e:000b 06       PUSH
+0810938e:000c 2d       OVER
+0810938e:000d 20 02    SEND 02
+0810938e:000f 1b 02 00 GSET 0002 ; Game
+0810938e:0012 1e       RETURN
+<Object-081093b6>
+0810945a:0000 31 02 00 AFRAME 02 00
+0810945a:0003 1a 02 00 GREF 0002 ; Game
+0810945a:0006 06       PUSH
+0810945a:0007 19 03 00 LIT 0003 ; Over
+0810945a:000a 06       PUSH
+0810945a:000b 19 04 00 LIT 0004 ; <CompiledCode-Over>
+0810945a:000e 33       CLOSE
+0810945a:000f 1d       SETP
+0810945a:0010 1e       RETURN
+<Method-Over>
+081094e6:0000 31 02 00 AFRAME 02 00
+081094e6:0003 1a 03 00 GREF 0003 ; Hazard
+081094e6:0006 2e       NEWOBJECT
+081094e6:0007 1b 02 00 GSET 0002 ; Pit
+081094e6:000a 1e       RETURN
+<Object-0810950a>
+081095be:0000 31 02 00 AFRAME 02 00
+081095be:0003 1a 02 00 GREF 0002 ; Pit
+081095be:0006 06       PUSH
+081095be:0007 19 03 00 LIT 0003 ; Bump
+081095be:000a 06       PUSH
+081095be:000b 19 04 00 LIT 0004 ; <CompiledCode-Bump>
+081095be:000e 33       CLOSE
+081095be:000f 1d       SETP
+081095be:0010 1e       RETURN
+<Method-Bump>
+08109a32:0000 31 02 00 AFRAME 02 00
+08109a32:0003 19 02 00 LIT 0002 ; <CompiledCode-testVector>
+08109a32:0006 33       CLOSE
+08109a32:0007 1b 03 00 GSET 0003 ; testVector
+08109a32:000a 1e       RETURN
+<Method-testVector>
+08109be2:0000 31 02 00 AFRAME 02 00
+08109be2:0003 19 02 00 LIT 0002 ; <CompiledCode-main>
+08109be2:0006 33       CLOSE
+08109be2:0007 1b 03 00 GSET 0003 ; main
+08109be2:000a 1e       RETURN
+<Method-main>
+08109c42:0000 31 02 00 AFRAME 02 00
+08109c42:0003 1a 02 00 GREF 0002 ; main
+08109c42:0006 06       PUSH
+08109c42:0007 05       NIL
+08109c42:0008 06       PUSH
+08109c42:0009 06       PUSH
+08109c42:000a 1f 02    CALL 02
+08109c42:000c 1e       RETURN
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Make two fibo generators
+First pump 10 values from the fibo1 generator
+fibo1 1
+fibo1 1
+fibo1 2
+fibo1 3
+fibo1 5
+fibo1 8
+fibo1 13
+fibo1 21
+fibo1 34
+fibo1 55
+Now pump 5 values from the fibo2 generator
+fibo2 1
+fibo2 1
+fibo2 2
+fibo2 3
+fibo2 5
+Finally, resume pumping values from the fibo1 generator
+fibo1 89
+fibo1 144
+fibo1 233
+fibo1 377
+fibo1 610
+fibo1 987
+fibo1 1597
+fibo1 2584
+fibo1 4181
+fibo1 6765
+
+ test vector 
+6 8
+nil 1
+<Object-08109cda>
+99
+999
+abcdefg 101 102
+abcdffg 102 102
+zyxwvu 102 117 4
+true
+# ./bin/bobc -o test.bbo test.bob
+# ./bin/bobi test.bbo
+# rm test.bbo

@@ -11,7 +11,10 @@ PROGS=$(BINDIR)/bob $(BINDIR)/bobc $(BINDIR)/bobi $(BINDIR)/bobmerge
 LIBS=$(LIBDIR)/libbobc.a $(LIBDIR)/libbobi.a
 HDRS=$(HDRDIR)/bob.h $(HDRDIR)/bobint.h $(HDRDIR)/bobcom.h
 
-CFLAGS=$(XCFLAGS) -Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers -Wimplicit-fallthrough=2 -I$(HDRDIR) -I./bobcom -I./bobint -DBOB_INCLUDE_FLOAT_SUPPORT
+WFLAGS=-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers -Wimplicit-fallthrough=2
+XINCLUDES=-I$(HDRDIR) -I./bobcom -I./bobint
+XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT -DWITH_TRACE
+CFLAGS=$(XCFLAGS) $(WFLAGS) $(XINCLUDES) $(XDEFINES)
 
 all:	$(DIRS) $(PROGS) $(LIBS)
 
@@ -139,7 +142,7 @@ clean:	$(DIRS)
 
 # test direct and compile , interpreter
 test: $(BOBFILES)
-	./bin/bob test.bob
+	./bin/bob -v -d test.bob >out.txt
 	# ./bin/bobc -o test.bbo test.bob
 	# ./bin/bobi test.bbo
 	# rm test.bbo

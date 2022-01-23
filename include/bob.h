@@ -11,6 +11,13 @@
 #include <stdarg.h>
 #include <setjmp.h>
 
+/* TRACE Macro's */
+#ifdef WITH_TRACE
+#define F_ENTER { fprintf( stderr, "%s %d %s\n", __FILE__, __LINE__,__func__); }
+#else
+#define F_ENTER
+#endif
+
 /* boolean values */
 #ifndef TRUE
 #define TRUE    1
@@ -133,6 +140,7 @@ struct BobMemorySpace
     unsigned char *base;
     unsigned char *free;
     unsigned char *top;
+
     BobValue      cObjects;
 };
 
@@ -164,55 +172,69 @@ typedef void     (*BobVPSetHandler)(BobInterpreter *c, BobValue obj, BobValue va
 /* interpreter context structure */
 struct BobInterpreter
 {
-    BobCompiler     *compiler;          /* compiler structure */
-    char            *errorMessage;             /* last error message */
+    BobCompiler     *compiler;      /* compiler structure */
+    char            *errorMessage;  /* last error message */
+
     BobUnwindTarget *unwindTarget;  /* unwind target */
-    BobValue        *argv;                 /* arguments for current function */
-    int             argc;                       /* argument count for current function */
-    BobValue        *stack;                /* stack base */
-    BobValue        *stackTop;             /* stack top */
-    BobValue        *sp;                   /* stack pointer */
-    BobFrame        *fp;                   /* frame pointer */
-    BobValue        code;                  /* code object */
-    unsigned char   *cbase;           /* code base */
-    unsigned char   *pc;              /* program counter */
-    BobValue        val;                   /* value register */
-    BobValue        env;                   /* environment register */
-    BobValue        nilValue;              /* nil value */
-    BobValue        trueValue;             /* true value */
-    BobValue        falseValue;            /* false value */
-    BobValue        objectValue;           /* base of object inheritance tree */
-    BobValue        methodObject;          /* object for the Method type */
-    BobValue        vectorObject;          /* object for the Vector type */
-    BobValue        symbolObject;          /* object for the Symbol type */
-    BobValue        stringObject;          /* object for the String type */
-    BobValue        integerObject;         /* object for the Integer type */
-    BobValue        floatObject;           /* object for the Float type */
-    BobValue        symbols;               /* symbol table */
+
+    BobValue        *argv;          /* arguments for current function */
+    int             argc;           /* argument count for current function */
+
+    BobValue        *stack;         /* stack base */
+    BobValue        *stackTop;      /* stack top */
+
+    BobValue        *sp;            /* stack pointer */
+    BobFrame        *fp;            /* frame pointer */
+
+    BobValue        code;           /* code object */
+    unsigned char   *cbase;         /* code base */
+
+    unsigned char   *pc;            /* program counter */
+
+    BobValue        val;            /* value register */
+    BobValue        env;            /* environment register */
+
+    BobValue        nilValue;       /* nil value */
+    BobValue        trueValue;      /* true value */
+    BobValue        falseValue;     /* false value */
+
+    BobValue        objectValue;    /* base of object inheritance tree */
+    BobValue        methodObject;   /* object for the Method type */
+    BobValue        vectorObject;   /* object for the Vector type */
+    BobValue        symbolObject;   /* object for the Symbol type */
+    BobValue        stringObject;   /* object for the String type */
+    BobValue        integerObject;  /* object for the Integer type */
+    BobValue        floatObject;    /* object for the Float type */
+    BobValue        symbols;        /* symbol table */
+
     void (*errorHandler)(BobInterpreter *c, int code, va_list ap);
 
-    BobProtectedPtrs *protectedPtrs;/* protected pointers */
-    BobMemorySpace   *oldSpace;       /* old memory space */
-    BobMemorySpace   *newSpace;       /* new memory space */
-    unsigned long    gcCount;          /* number of garbage collections */
-    unsigned long    totalMemory;      /* total memory allocated */
-    unsigned long    allocCount;       /* number of calls to BobAlloc */
-    BobStream        *standardInput;       /* standard input stream */
-    BobStream        *standardOutput;      /* standard output stream */
-    BobStream        *standardError;       /* standard error stream */
-    void *(*fileOpen)(BobInterpreter *c, char *name, char *mode);
+    BobProtectedPtrs *protectedPtrs;    /* protected pointers */
+    BobMemorySpace   *oldSpace;         /* old memory space */
+    BobMemorySpace   *newSpace;         /* new memory space */
 
-    int (*fileClose)(void *fp);
+    unsigned long    gcCount;           /* number of garbage collections */
+    unsigned long    totalMemory;       /* total memory allocated */
+    unsigned long    allocCount;        /* number of calls to BobAlloc */
 
-    int (*fileGetC)(void *fp);
+    BobStream        *standardInput;    /* standard input stream */
+    BobStream        *standardOutput;   /* standard output stream */
+    BobStream        *standardError;    /* standard error stream */
 
-    int (*filePutC)(int ch, void *fp);
+    void *(*fileOpen) (BobInterpreter *c, char *name, char *mode);
+    int (*fileClose)  (void *fp);
+    int (*fileGetC)   (void *fp);
+    int (*filePutC)   (int ch, void *fp);
 
-    BobDispatch *typeDispatch;      /* the Type type */
-    BobDispatch *types;             /* derived types */
+    BobDispatch *typeDispatch;          /* the Type type */
+    BobDispatch *types;                 /* derived types */
+
     void (*protectHandler)(BobInterpreter *c, void *data);
 
     void *protectData;
+
+    int verbose;                        /* be verbose info during execution if > 0 */
+    int debug;                          /* show debug info during execution if > 0 */
 };
 
 /* argument list macros */
@@ -274,7 +296,6 @@ struct BobDispatch
     void (*scan)(BobInterpreter *c, BobValue obj);
 
     BobIntegerType (*hash)(BobValue obj);
-
     BobValue object;
 
     long     dataSize;
@@ -282,7 +303,6 @@ struct BobDispatch
     void (*destroy)(BobInterpreter *c, BobValue obj);
 
     BobDispatch *parent;
-
     BobDispatch *next;
 };
 
@@ -417,9 +437,9 @@ typedef struct
 #define BobSymbolPrintNameLength(o)     (((BobSymbol *)o)->printNameLength)
 #define BobSymbolHashValue(o)           (((BobSymbol *)o)->hashValue)
 #define BobGlobalValue(o)               (((BobSymbol *)o)->value)
-#define BobSetGlobalValue(o, v)          (((BobSymbol *)o)->value = (v))
+#define BobSetGlobalValue(o, v)         (((BobSymbol *)o)->value = (v))
 #define BobSymbolNext(o)                (((BobSymbol *)o)->next)
-#define BobSetSymbolNext(o, v)           (((BobSymbol *)o)->next = (v))
+#define BobSetSymbolNext(o, v)          (((BobSymbol *)o)->next = (v))
 
 BobValue
 BobMakeSymbol(BobInterpreter *c, unsigned char *printName, int length);
@@ -447,11 +467,11 @@ typedef struct
 
 #define BobObjectP(o)                   BobIsBaseType(o,&BobObjectDispatch)
 #define BobObjectClass(o)               (((BobObject *)o)->parent)
-#define BobSetObjectClass(o, v)          (((BobObject *)o)->parent = (v))
+#define BobSetObjectClass(o, v)         (((BobObject *)o)->parent = (v))
 #define BobObjectProperties(o)          (((BobObject *)o)->properties)
-#define BobSetObjectProperties(o, v)     (((BobObject *)o)->properties = (v))
+#define BobSetObjectProperties(o, v)    (((BobObject *)o)->properties = (v))
 #define BobObjectPropertyCount(o)       (((BobObject *)o)->propertyCount)
-#define BobSetObjectPropertyCount(o, v)  (((BobObject *)o)->propertyCount = (v))
+#define BobSetObjectPropertyCount(o, v) (((BobObject *)o)->propertyCount = (v))
 
 BobValue
 BobMakeObject(BobInterpreter *c, BobValue parent);
@@ -528,20 +548,20 @@ typedef struct
         BobIntegerType size;
         BobValue       forwardingAddr;
     }              d;
-/*  BobValue data[0]; */
+    /*  BobValue data[0]; */
 }                  BobVector;
 
-#define BobVectorP(o)                   BobIsBaseType(o,&BobVectorDispatch)
-#define BobMovedVectorP(o)              BobIsType(o,&BobMovedVectorDispatch)
-#define BobVectorSizeI(o)               (((BobVector *)o)->d.size)
-#define BobSetVectorSize(o, s)           (((BobVector *)o)->d.size = (s))
-#define BobVectorForwardingAddr(o)      (((BobVector *)o)->d.forwardingAddr)
-#define BobSetVectorForwardingAddr(o, a) (((BobVector *)o)->d.forwardingAddr = (a))
-#define BobVectorMaxSize(o)             (((BobVector *)o)->maxSize)
-#define BobSetVectorMaxSize(o, s)        (((BobVector *)o)->maxSize = (s))
-#define BobVectorAddressI(o)            ((BobValue *)((char *)o + sizeof(BobVector)))
-#define BobVectorElementI(o, i)          (BobVectorAddress(o)[i])
-#define BobSetVectorElementI(o, i, v)     (BobVectorAddress(o)[i] = (v))
+#define BobVectorP(o)                       BobIsBaseType(o,&BobVectorDispatch)
+#define BobMovedVectorP(o)                  BobIsType(o,&BobMovedVectorDispatch)
+#define BobVectorSizeI(o)                   (((BobVector *)o)->d.size)
+#define BobSetVectorSize(o, s)              (((BobVector *)o)->d.size = (s))
+#define BobVectorForwardingAddr(o)          (((BobVector *)o)->d.forwardingAddr)
+#define BobSetVectorForwardingAddr(o, a)    (((BobVector *)o)->d.forwardingAddr = (a))
+#define BobVectorMaxSize(o)                 (((BobVector *)o)->maxSize)
+#define BobSetVectorMaxSize(o, s)           (((BobVector *)o)->maxSize = (s))
+#define BobVectorAddressI(o)                ((BobValue *)((char *)o + sizeof(BobVector)))
+#define BobVectorElementI(o, i)             (BobVectorAddress(o)[i])
+#define BobSetVectorElementI(o, i, v)       (BobVectorAddress(o)[i] = (v))
 
 BobValue
 BobMakeVector(BobInterpreter *c, BobIntegerType size);
@@ -571,14 +591,14 @@ typedef struct
 {
     BobDispatch    *dispatch;
     BobIntegerType size;
-/*  BobValue data[0]; */
+    /*  BobValue data[0]; */
 }                  BobBasicVector;
 
-#define BobBasicVectorSize(o)           (((BobBasicVector *)o)->size)
-#define BobSetBasicVectorSize(o, s)      (((BobBasicVector *)o)->size = (s))
-#define BobBasicVectorAddress(o)        ((BobValue *)((char *)o + sizeof(BobBasicVector)))
-#define BobBasicVectorElement(o, i)      (BobBasicVectorAddress(o)[i])
-#define BobSetBasicVectorElement(o, i, v) (BobBasicVectorAddress(o)[i] = (v))
+#define BobBasicVectorSize(o)               (((BobBasicVector *)o)->size)
+#define BobSetBasicVectorSize(o, s)         (((BobBasicVector *)o)->size = (s))
+#define BobBasicVectorAddress(o)            ((BobValue *)((char *)o + sizeof(BobBasicVector)))
+#define BobBasicVectorElement(o, i)         (BobBasicVectorAddress(o)[i])
+#define BobSetBasicVectorElement(o, i, v)   (BobBasicVectorAddress(o)[i] = (v))
 
 BobValue
 BobMakeBasicVector(BobInterpreter *c, BobDispatch *type, BobIntegerType size);
@@ -588,7 +608,7 @@ BobMakeBasicVector(BobInterpreter *c, BobDispatch *type, BobIntegerType size);
 typedef struct
 {
     BobDispatch *dispatch;
-/*  BobValue data[0]; */
+    /*  BobValue data[0]; */
 }                  BobFixedVector;
 
 #define BobFixedVectorAddress(o)        ((BobValue *)((char *)o + sizeof(BobFixedVector)))
@@ -748,9 +768,7 @@ BobDefaultPrint(BobInterpreter *c, BobValue obj, BobStream *s);
 struct BobStreamDispatch
 {
     int (*close)(BobStream *s);
-
     int (*getc)(BobStream *s);
-
     int (*putc)(int ch, BobStream *s);
 };
 

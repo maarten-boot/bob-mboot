@@ -32,9 +32,10 @@ static BobCMethod functionTable[] = {
 /* BobUseEval - enter the built-in functions and symbols for eval */
 void
 BobUseEval(BobInterpreter *c, void *buf, size_t size)
-{
+{ F_ENTER;
     BobCMethod *method;
 
+    /* 256 is the size of the literal buffer */
     /* create a compiler context */
     if ((c->compiler = BobMakeCompiler(c, buf, size, 256)) == NULL) {
         BobInsufficientMemory(c);
@@ -49,7 +50,7 @@ BobUseEval(BobInterpreter *c, void *buf, size_t size)
 /* BIF_Load - built-in function 'Load' */
 static BobValue
 BIF_Load(BobInterpreter *c)
-{
+{ F_ENTER;
     BobStream *s = NULL;
     char      *name;
 
@@ -61,7 +62,7 @@ BIF_Load(BobInterpreter *c)
 /* BIF_Eval - built-in function 'Eval' */
 static BobValue
 BIF_Eval(BobInterpreter *c)
-{
+{ F_ENTER;
     char *str;
 
     BobCheckArgCnt(c, 3);
@@ -75,7 +76,7 @@ BIF_Eval(BobInterpreter *c)
 /* BIF_CompileFile - built-in function 'CompileFile' */
 static BobValue
 BIF_CompileFile(BobInterpreter *c)
-{
+{ F_ENTER;
     char *iname;
     char *oname;
 
@@ -92,7 +93,7 @@ BIF_CompileFile(BobInterpreter *c)
 /* BobEvalString - evaluate a string */
 BobValue
 BobEvalString(BobInterpreter *c, char *str)
-{
+{ F_ENTER;
     BobStream *s = BobMakeStringStream(c, (unsigned char *) str, strlen(str));
 
     if (s) {
@@ -108,7 +109,7 @@ BobEvalString(BobInterpreter *c, char *str)
 /* BobEvalStream - evaluate a stream */
 BobValue
 BobEvalStream(BobInterpreter *c, BobStream *s)
-{
+{ F_ENTER;
     BobValue val;
 
     BobInitScanner(c->compiler, s);
@@ -120,7 +121,7 @@ BobEvalStream(BobInterpreter *c, BobStream *s)
 /* BobLoadFile - read and evaluate expressions from a file */
 int
 BobLoadFile(BobInterpreter *c, char *fname, BobStream *os)
-{
+{ F_ENTER;
     BobUnwindTarget target;
     BobStream       *is;
     int             sts;
@@ -138,7 +139,7 @@ BobLoadFile(BobInterpreter *c, char *fname, BobStream *os)
     }
 
     /* announce the file */
-    if (os) {
+    if (os && c -> verbose ) {
         BobStreamPutS("Loading '", os);
         BobStreamPutS(fname, os);
         BobStreamPutS("'\n", os);
@@ -157,7 +158,7 @@ BobLoadFile(BobInterpreter *c, char *fname, BobStream *os)
 /* BobLoadStream - read and evaluate a stream of expressions */
 void
 BobLoadStream(BobInterpreter *c, BobStream *is, BobStream *os)
-{
+{ F_ENTER;
     BobValue expr;
 
     BobInitScanner(c->compiler, is);

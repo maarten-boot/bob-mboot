@@ -123,7 +123,7 @@ getch(BobCompiler *c);
 /* BobInitScanner - initialize the scanner */
 void
 BobInitScanner(BobCompiler *c, BobStream *s)
-{
+{ F_ENTER;
     /* remember the input stream */
     c->input = s;
 
@@ -143,7 +143,7 @@ BobInitScanner(BobCompiler *c, BobStream *s)
 /* BobToken - get the next BobToken */
 int
 BobToken(BobCompiler *c)
-{
+{ F_ENTER;
     int tkn;
 
     if ((tkn = c->savedToken) != T_NOTOKEN) {
@@ -159,14 +159,14 @@ BobToken(BobCompiler *c)
 /* BobSaveToken - save a BobToken */
 void
 BobSaveToken(BobCompiler *c, int tkn)
-{
+{ F_ENTER;
     c->savedToken = tkn;
 }
 
 /* BobTokenName - get the name of a BobToken */
 char *
 BobTokenName(int tkn)
-{
+{ F_ENTER;
     static char tname[2];
 
     if (tkn == T_EOF) {
@@ -185,7 +185,7 @@ BobTokenName(int tkn)
 /* rtoken - read the next BobToken */
 static int
 rtoken(BobCompiler *c)
-{
+{ F_ENTER;
     int ch;
     int ch2;
 
@@ -390,7 +390,7 @@ rtoken(BobCompiler *c)
 /* getstring - get a string */
 static int
 getstring(BobCompiler *c)
-{
+{ F_ENTER;
     int  len = 0;
     int  ch;
     char *p;
@@ -452,7 +452,7 @@ getstring(BobCompiler *c)
 /* getcharacter - get a character constant */
 static int
 getcharacter(BobCompiler *c)
-{
+{ F_ENTER;
     c->t_value = literalch(c, getch(c));
     c->t_token[0] = (char) c->t_value;
     c->t_token[1] = '\0';
@@ -467,7 +467,7 @@ getcharacter(BobCompiler *c)
 /* CollectHexChar - collect a hex character code */
 static int
 CollectHexChar(BobCompiler *c)
-{
+{ F_ENTER;
     int ch;
 
     if ((ch = getch(c)) == EOF || !isxdigit(ch)) {
@@ -488,7 +488,7 @@ CollectHexChar(BobCompiler *c)
 /* CollectOctalChar - collect an octal character code */
 static int
 CollectOctalChar(BobCompiler *c, int ch)
-{
+{ F_ENTER;
     int value = ch - '0';
 
     if ((ch = getch(c)) == EOF || ch < '0' || ch > '7') {
@@ -508,7 +508,7 @@ CollectOctalChar(BobCompiler *c, int ch)
 /* CollecUnicodeChar - collect a unicode character code */
 static int
 CollecUnicodeChar(BobCompiler *c)
-{
+{ F_ENTER;
     int ch;
 
     if ((ch = getch(c)) == EOF || !isxdigit(ch)) {
@@ -545,7 +545,7 @@ CollecUnicodeChar(BobCompiler *c)
 /* literalch - get a character from a literal string */
 static int
 literalch(BobCompiler *c, int ch)
-{
+{ F_ENTER;
     if (ch == '\\') {
         switch (ch = getch(c)) {
 
@@ -605,7 +605,7 @@ literalch(BobCompiler *c, int ch)
 /* getid - get an identifier */
 static int
 getid(BobCompiler *c, int ch)
-{
+{ F_ENTER;
     int  len = 1, i;
     char *p;
 
@@ -638,7 +638,7 @@ getid(BobCompiler *c, int ch)
 /* getnumber - get a number */
 static int
 getnumber(BobCompiler *c, int ch)
-{
+{ F_ENTER;
     char *p  = c->t_token;
     int  tkn = T_INTEGER;
 
@@ -703,7 +703,7 @@ getnumber(BobCompiler *c, int ch)
 /* getradixnumber - read a number in a specified radix */
 static int
 getradixnumber(BobCompiler *c, int radix)
-{
+{ F_ENTER;
     char           *p  = c->t_token;
     BobIntegerType val = 0;
     int            ch;
@@ -734,7 +734,7 @@ getradixnumber(BobCompiler *c, int radix)
 /* isradixdigit - check to see if a character is a digit in a radix */
 static int
 isradixdigit(int ch, int radix)
-{
+{ F_ENTER;
     switch (radix) {
 
     case 2:
@@ -756,7 +756,7 @@ isradixdigit(int ch, int radix)
 /* getdigit - convert an ascii code to a digit */
 static int
 getdigit(int ch)
-{
+{ F_ENTER;
     return ch <= '9' ? ch - '0' : ch - 'A' + 10;
 }
 
@@ -774,7 +774,7 @@ static void skipcomment(BobCompiler *c) {
 /* skipspaces - skip leading spaces */
 static int
 skipspaces(BobCompiler *c)
-{
+{ F_ENTER;
     int ch;
 
     // currently we support no comments
@@ -802,7 +802,7 @@ skipspaces(BobCompiler *c)
 /* isidchar - is this an identifier character */
 static int
 isidchar(int ch)
-{
+{ F_ENTER;
     return isupper(ch)
            || islower(ch)
            || isdigit(ch)
@@ -812,7 +812,7 @@ isidchar(int ch)
 /* getch - get the next character */
 static int
 getch(BobCompiler *c)
-{
+{ F_ENTER;
     int ch;
 
     /* check for a lookahead character */
@@ -855,7 +855,7 @@ getch(BobCompiler *c)
 /* BobParseError - report an error in the current line */
 void
 BobParseError(BobCompiler *c, char *msg)
-{
+{ F_ENTER;
     c->ic->errorMessage = msg;
     BobCallErrorHandler(c->ic, BobErrSyntaxError, c);
 }

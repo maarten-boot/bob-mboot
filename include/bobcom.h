@@ -116,24 +116,36 @@ struct BobCompiler
 {
     BobInterpreter *ic;                  /* compiler - interpreter context */
     BobStream      *input;               /* compiler - input stream */
+
     int            blockLevel;           /* compiler - nesting level */
     ATABLE         *arguments;           /* compiler - argument frames */
+
     SENTRY         *bsp;                 /* compiler - break stack */
     SENTRY         *csp;                 /* compiler - continue stack */
     SWENTRY        *ssp;                 /* compiler - switch stack */
+
     unsigned char  *codebuf;             /* compiler - code buffer */
     unsigned char  *cbase, *cptr, *ctop; /* compiler - code buffer positions */
+
     BobValue       literalbuf;           /* compiler - literal buffer */
     long           lbase, lptr, ltop;    /* compiler - literal buffer positions */
+
     BobIntegerType t_value;              /* scanner - integer value */
     BobFloatType   t_fvalue;             /* scanner - float value */
+
     char           t_token[TKNSIZE + 1]; /* scanner - token string */
+
     int            savedToken;           /* scanner - look ahead BobToken */
     int            savedChar;            /* scanner - look ahead character */
+
     int            lineNumber;           /* scanner - line number */
     char           line[LSIZE + 1];      /* scanner - last input line */
+
     char           *linePtr;             /* scanner - line pointer */
     int            atEOF;                /* scanner - input end of file flag */
+
+    int            verbose;              /* verbose flag */
+    int            debug;                /* verbose flag */
 };
 
 /* prototypes for scanner.c */

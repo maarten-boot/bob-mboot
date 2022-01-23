@@ -19,7 +19,8 @@ typedef struct pvalue
 {
     void (*fcn)(BobCompiler *, int, struct pvalue *);
 
-    int val, val2;
+    int val;
+    int val2;
 } PVAL;
 
 /* variable access function codes */
@@ -297,7 +298,7 @@ fixup(BobCompiler *c, int chn, int val);
 /* BobMakeCompiler - initialize the compiler */
 BobCompiler *
 BobMakeCompiler(BobInterpreter *ic, void *buf, size_t size, long lsize)
-{
+{ F_ENTER;
     size_t      csize = size - sizeof(BobInterpreter);
     BobCompiler *c;
 
@@ -330,14 +331,14 @@ BobMakeCompiler(BobInterpreter *ic, void *buf, size_t size, long lsize)
 /* BobFreeCompiler - free the compiler structure */
 void
 BobFreeCompiler(BobCompiler *c)
-{
+{ F_ENTER;
     BobUnprotectPointer(c->ic, &c->literalbuf);
 }
 
 /* SetupCompiler - setup the compiler context */
 static void
 SetupCompiler(BobCompiler *c)
-{
+{ F_ENTER;
     c->cbase      = c->cptr = c->codebuf;
     c->lbase      = c->lptr = 0;
     c->bsp        = NULL;
@@ -350,7 +351,7 @@ SetupCompiler(BobCompiler *c)
 /* BobCompileExpr - compile a single expression */
 BobValue
 BobCompileExpr(BobInterpreter *ic)
-{
+{ F_ENTER;
     BobCompiler     *c = ic->compiler;
     BobValue        code;
     BobValue        *src;
@@ -388,6 +389,7 @@ BobCompileExpr(BobInterpreter *ic)
 
     /* compile the code */
     do_statement(c);
+
     putcbyte(c, BobOpRETURN);
 
     /* make the bytecode array */
@@ -406,9 +408,11 @@ BobCompileExpr(BobInterpreter *ic)
     /* make a closure */
     code = BobMakeMethod(ic, code, ic->nilValue);
 
+    if (c->debug) {
+        BobDecodeProcedure(ic, code, ic->standardOutput);
+    }
+
     /* return the function */
-    // TODO: if debug
-    // BobDecodeProcedure(ic, code, ic->standardOutput);
     BobPopUnwindTarget(ic);
 
     return code;
@@ -417,7 +421,7 @@ BobCompileExpr(BobInterpreter *ic)
 /* do_statement - compile a single statement */
 static void
 do_statement(BobCompiler *c)
-{
+{ F_ENTER;
     int tkn;
 
     switch (tkn = BobToken(c)) {
@@ -484,7 +488,7 @@ do_statement(BobCompiler *c)
 /* do_define - compile the 'define' expression */
 static void
 do_define(BobCompiler *c)
-{
+{ F_ENTER;
     char name[256];
     int  tkn;
 
@@ -515,7 +519,7 @@ do_define(BobCompiler *c)
 /* define_method - handle method definition statement */
 static void
 define_method(BobCompiler *c, char *name)
-{
+{ F_ENTER;
     char selector[256];
     int  tkn;
 
@@ -552,7 +556,7 @@ define_method(BobCompiler *c, char *name)
 /* define_function - handle function definition statement */
 static void
 define_function(BobCompiler *c, char *name)
-{
+{ F_ENTER;
     /* compile the code */
     compile_code(c, name);
 
@@ -564,7 +568,7 @@ define_function(BobCompiler *c, char *name)
 /* compile_code - compile a function or method */
 static void
 compile_code(BobCompiler *c, char *name)
-{
+{ F_ENTER;
     BobInterpreter *ic = c->ic;
 
     int            oldLevel;
@@ -721,7 +725,7 @@ compile_code(BobCompiler *c, char *name)
 /* do_if - compile the 'if/else' expression */
 static void
 do_if(BobCompiler *c)
-{
+{ F_ENTER;
     int tkn;
     int nxt;
     int end;
@@ -757,7 +761,7 @@ do_if(BobCompiler *c)
 /* do_while - compile the 'while' expression */
 static void
 do_while(BobCompiler *c)
-{
+{ F_ENTER;
     SENTRY bentry;
     SENTRY centry;
 
@@ -792,7 +796,7 @@ do_while(BobCompiler *c)
 /* do_dowhile - compile the do/while' expression */
 static void
 do_dowhile(BobCompiler *c)
-{
+{ F_ENTER;
     SENTRY bentry;
     SENTRY centry;
 
@@ -827,7 +831,7 @@ do_dowhile(BobCompiler *c)
 /* do_for - compile the 'for' statement */
 static void
 do_for(BobCompiler *c)
-{
+{ F_ENTER;
     int    tkn;
     int    nxt;
     int    end;
@@ -938,7 +942,7 @@ do_for(BobCompiler *c)
 /* addbreak - add a break level to the stack */
 static void
 addbreak(BobCompiler *c, SENTRY *sentry, int lbl)
-{
+{ F_ENTER;
     sentry->level = c->blockLevel;
     sentry->label = lbl;
     sentry->next  = c->bsp;
@@ -948,7 +952,7 @@ addbreak(BobCompiler *c, SENTRY *sentry, int lbl)
 /* rembreak - remove a break level from the stack */
 static int
 rembreak(BobCompiler *c)
-{
+{ F_ENTER;
     int lbl = c->bsp->label;
 
     c->bsp = c->bsp->next;
@@ -959,7 +963,7 @@ rembreak(BobCompiler *c)
 /* do_break - compile the 'break' statement */
 static void
 do_break(BobCompiler *c)
-{
+{ F_ENTER;
     if (c->bsp) {
         UnwindStack(c, c->blockLevel - c->bsp->level);
         putcbyte(c, BobOpBR);
@@ -973,7 +977,7 @@ do_break(BobCompiler *c)
 /* addcontinue - add a continue level to the stack */
 static void
 addcontinue(BobCompiler *c, SENTRY *centry, int lbl)
-{
+{ F_ENTER;
     centry->level = c->blockLevel;
     centry->label = lbl;
     centry->next  = c->csp;
@@ -983,14 +987,14 @@ addcontinue(BobCompiler *c, SENTRY *centry, int lbl)
 /* remcontinue - remove a continue level from the stack */
 static void
 remcontinue(BobCompiler *c)
-{
+{ F_ENTER;
     c->csp = c->csp->next;
 }
 
 /* do_continue - compile the 'continue' statement */
 static void
 do_continue(BobCompiler *c)
-{
+{ F_ENTER;
     /*
      * Continue in a for statement skips to before the execution of the last term so  increments are not executed
      * for(i=0; i<10; i++)) { continue; } // will loop forever
@@ -1009,7 +1013,7 @@ do_continue(BobCompiler *c)
 /* UnwindStack - pop frames off the stack to get back to a previous nesting level */
 static void
 UnwindStack(BobCompiler *c, int levels)
-{
+{ F_ENTER;
     while (--levels >= 0) {
         putcbyte(c, BobOpUNFRAME);
     }
@@ -1018,7 +1022,7 @@ UnwindStack(BobCompiler *c, int levels)
 /* addswitch - add a switch level to the stack */
 static void
 addswitch(BobCompiler *c, SWENTRY *swentry)
-{
+{ F_ENTER;
     swentry->nCases       = 0;
     swentry->cases        = NULL;
     swentry->defaultLabel = NIL;
@@ -1028,7 +1032,7 @@ addswitch(BobCompiler *c, SWENTRY *swentry)
 /* remswitch - remove a switch level from the stack */
 static void
 remswitch(BobCompiler *c)
-{
+{ F_ENTER;
     CENTRY *entry;
     CENTRY *next;
 
@@ -1043,7 +1047,7 @@ remswitch(BobCompiler *c)
 /* do_switch - compile the 'switch' statement */
 static void
 do_switch(BobCompiler *c)
-{
+{ F_ENTER;
     int     dispatch;
     int     end;
     int     cnt;
@@ -1103,7 +1107,7 @@ do_switch(BobCompiler *c)
 /* do_case - compile the 'case' statement */
 static void
 do_case(BobCompiler *c)
-{
+{ F_ENTER;
     if (c->ssp) {
         CENTRY **pNext;
         CENTRY *entry;
@@ -1179,7 +1183,7 @@ do_case(BobCompiler *c)
 /* do_default - compile the 'default' statement */
 static void
 do_default(BobCompiler *c)
-{
+{ F_ENTER;
     if (c->ssp) {
         frequire(c, ':');
         c->ssp->defaultLabel = codeaddr(c);
@@ -1192,7 +1196,7 @@ do_default(BobCompiler *c)
 /* do_block - compile the {} expression */
 static void
 do_block(BobCompiler *c)
-{
+{ F_ENTER;
     ATABLE atable;
     int    tcnt = 0;
     int    tkn;
@@ -1270,7 +1274,7 @@ do_block(BobCompiler *c)
 /* do_return - handle the 'return' statement */
 static void
 do_return(BobCompiler *c)
-{
+{ F_ENTER;
     int tkn;
 
     if ((tkn = BobToken(c)) == ';') {
@@ -1291,7 +1295,7 @@ do_return(BobCompiler *c)
 /* do_test - compile a test expression */
 static void
 do_test(BobCompiler *c)
-{
+{ F_ENTER;
     // test as in if  <test>, while <test>, for( a; <test>; c)
     frequire(c, '(');
 
@@ -1303,7 +1307,7 @@ do_test(BobCompiler *c)
 /* do_expr - parse an expression */
 static void
 do_expr(BobCompiler *c)
-{
+{ F_ENTER;
     PVAL pv;
 
     do_expr1(c, &pv);
@@ -1314,7 +1318,7 @@ do_expr(BobCompiler *c)
 /* do_init_expr - parse an initialization expression */
 static void
 do_init_expr(BobCompiler *c)
-{
+{ F_ENTER;
     PVAL pv;
 
     do_expr2(c, &pv);
@@ -1325,7 +1329,7 @@ do_init_expr(BobCompiler *c)
 /* rvalue - get the rvalue of a partial expression */
 static void
 rvalue(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     if (pv->fcn) {
         (*pv->fcn)(c, LOAD, pv);
         pv->fcn = NULL;
@@ -1335,7 +1339,7 @@ rvalue(BobCompiler *c, PVAL *pv)
 /* chklvalue - make sure we've got an lvalue */
 static void
 chklvalue(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     if (pv->fcn == NULL) {
         BobParseError(c, "Expecting an lvalue");
     }
@@ -1344,7 +1348,7 @@ chklvalue(BobCompiler *c, PVAL *pv)
 /* do_expr1 - handle the ',' operator */
 static void
 do_expr1(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     do_expr2(c, pv);
@@ -1363,7 +1367,7 @@ do_expr1(BobCompiler *c, PVAL *pv)
 /* do_expr2 - handle the assignment operators */
 static void
 do_expr2(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     do_expr3(c, pv);
@@ -1444,7 +1448,7 @@ do_expr2(BobCompiler *c, PVAL *pv)
 /* do_assignment - handle assignment operations */
 static void
 do_assignment(BobCompiler *c, PVAL *pv, int op)
-{
+{ F_ENTER;
     PVAL pv2;
 
     (*pv->fcn)(c, DUP, 0);
@@ -1464,7 +1468,7 @@ do_assignment(BobCompiler *c, PVAL *pv, int op)
 /* do_expr3 - handle the '?:' operator */
 static void
 do_expr3(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int nxt;
     int end;
@@ -1497,7 +1501,7 @@ do_expr3(BobCompiler *c, PVAL *pv)
 /* do_expr4 - handle the '||' operator */
 static void
 do_expr4(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int nxt;
     int end = 0;
@@ -1524,7 +1528,7 @@ do_expr4(BobCompiler *c, PVAL *pv)
 /* do_expr5 - handle the '&&' operator */
 static void
 do_expr5(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int nxt;
     int end = 0;
@@ -1550,7 +1554,7 @@ do_expr5(BobCompiler *c, PVAL *pv)
 /* do_expr6 - handle the '|' operator */
 static void
 do_expr6(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     do_expr7(c, pv);
@@ -1572,7 +1576,7 @@ do_expr6(BobCompiler *c, PVAL *pv)
 /* do_expr7 - handle the '^' operator */
 static void
 do_expr7(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     do_expr8(c, pv);
@@ -1594,7 +1598,7 @@ do_expr7(BobCompiler *c, PVAL *pv)
 /* do_expr8 - handle the '&' operator */
 static void
 do_expr8(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     do_expr9(c, pv);
@@ -1616,7 +1620,7 @@ do_expr8(BobCompiler *c, PVAL *pv)
 /* do_expr9 - handle the '==' and '!=' operators */
 static void
 do_expr9(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int op;
 
@@ -1654,7 +1658,7 @@ do_expr9(BobCompiler *c, PVAL *pv)
 /* do_expr10 - handle the '<', '<=', '>=' and '>' operators */
 static void
 do_expr10(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int op;
 
@@ -1701,7 +1705,7 @@ do_expr10(BobCompiler *c, PVAL *pv)
 /* do_expr11 - handle the '<<' and '>>' operators */
 static void
 do_expr11(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int op;
 
@@ -1740,7 +1744,7 @@ do_expr11(BobCompiler *c, PVAL *pv)
 /* do_expr12 - handle the '+' and '-' operators */
 static void
 do_expr12(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int op;
 
@@ -1779,7 +1783,7 @@ do_expr12(BobCompiler *c, PVAL *pv)
 /* do_expr13 - handle the '*' and '/' operators */
 static void
 do_expr13(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int op;
 
@@ -1822,7 +1826,7 @@ do_expr13(BobCompiler *c, PVAL *pv)
 /* do_expr14 - handle unary operators */
 static void
 do_expr14(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     switch (tkn = BobToken(c)) {
@@ -1867,7 +1871,7 @@ do_expr14(BobCompiler *c, PVAL *pv)
 /* do_preincrement - handle prefix '++' and '--' */
 static void
 do_preincrement(BobCompiler *c, PVAL *pv, int op)
-{
+{ F_ENTER;
     do_expr15(c, pv);
 
     chklvalue(c, pv);
@@ -1883,7 +1887,7 @@ do_preincrement(BobCompiler *c, PVAL *pv, int op)
 /* do_postincrement - handle postfix '++' and '--' */
 static void
 do_postincrement(BobCompiler *c, PVAL *pv, int op)
-{
+{ F_ENTER;
     chklvalue(c, pv);
 
     (*pv->fcn)(c, DUP, 0);
@@ -1899,7 +1903,7 @@ do_postincrement(BobCompiler *c, PVAL *pv, int op)
 /* do_expr15 - handle function calls */
 static void
 do_expr15(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     do_primary(c, pv);
@@ -1939,7 +1943,7 @@ do_expr15(BobCompiler *c, PVAL *pv)
 /* do_prop_reference - parse a property reference */
 static void
 do_prop_reference(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     /* push the object reference */
@@ -1967,7 +1971,7 @@ do_prop_reference(BobCompiler *c, PVAL *pv)
 /* do_selector - parse a property selector */
 static void
 do_selector(BobCompiler *c)
-{
+{ F_ENTER;
     int tkn;
 
     switch (tkn = BobToken(c)) {
@@ -1990,7 +1994,7 @@ do_selector(BobCompiler *c)
 /* do_primary - parse a primary expression and unary operators */
 static void
 do_primary(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     switch (BobToken(c)) {
 
     case T_FUNCTION:
@@ -2054,7 +2058,7 @@ do_primary(BobCompiler *c, PVAL *pv)
 /* do_function - parse a regular definition */
 static void
 do_function(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     char name[256];
     int  nameP;
     int  tkn;
@@ -2089,7 +2093,7 @@ do_function(BobCompiler *c, PVAL *pv)
 /* do_literal - parse a literal expression */
 static void
 do_literal(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     switch (BobToken(c)) {
 
     case T_IDENTIFIER:  /* symbol */
@@ -2113,7 +2117,7 @@ do_literal(BobCompiler *c, PVAL *pv)
 /* do_literal_symbol - parse a literal symbol */
 static void
 do_literal_symbol(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     code_literal(c, addliteral(c, BobInternCString(c->ic, c->t_token)));
     pv->fcn = NULL;
 }
@@ -2121,7 +2125,7 @@ do_literal_symbol(BobCompiler *c, PVAL *pv)
 /* do_literal_vector - parse a literal vector */
 static void
 do_literal_vector(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     long cnt = 0;
     int  tkn;
 
@@ -2149,7 +2153,7 @@ do_literal_vector(BobCompiler *c, PVAL *pv)
 /* do_literal_object - parse a literal object */
 static void
 do_literal_object(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     if ((tkn = BobToken(c)) == '}') {
@@ -2228,7 +2232,7 @@ do_literal_object(BobCompiler *c, PVAL *pv)
 /* do_call - compile a function call */
 static void
 do_call(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int n = 2;
 
@@ -2267,7 +2271,7 @@ do_call(BobCompiler *c, PVAL *pv)
 /* do_super - compile a super.selector() expression */
 static void
 do_super(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     /* object is 'this' */
     if (!load_argument(c, "this")) {
         BobParseError(c, "Use of super outside of a method");
@@ -2290,7 +2294,7 @@ do_super(BobCompiler *c, PVAL *pv)
 /* do_new_object - compile a new object expression */
 static void
 do_new_object(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
 
     /* get the property */
@@ -2330,7 +2334,7 @@ do_new_object(BobCompiler *c, PVAL *pv)
 /* do_method_call - compile a method call expression */
 static void
 do_method_call(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     int tkn;
     int n = 2;
 
@@ -2360,7 +2364,7 @@ do_method_call(BobCompiler *c, PVAL *pv)
 /* do_index - compile an indexing operation */
 static void
 do_index(BobCompiler *c, PVAL *pv)
-{
+{ F_ENTER;
     rvalue(c, pv);
 
     putcbyte(c, BobOpPUSH);
@@ -2374,7 +2378,7 @@ do_index(BobCompiler *c, PVAL *pv)
 /* AddArgument - add a formal argument */
 static void
 AddArgument(BobCompiler *c, ATABLE *atable, char *name)
-{
+{ F_ENTER;
     ARGUMENT *arg;
 
     if ((arg = (ARGUMENT *) BobAlloc(c->ic, sizeof(ARGUMENT) + strlen(name))) == NULL) {
@@ -2391,7 +2395,7 @@ AddArgument(BobCompiler *c, ATABLE *atable, char *name)
 /* PushArgFrame - push an argument frame onto the stack */
 static void
 PushArgFrame(BobCompiler *c, ATABLE *atable)
-{
+{ F_ENTER;
     atable->at_arguments     = NULL;
     atable->at_pNextArgument = &atable->at_arguments;
     atable->at_next          = c->arguments;
@@ -2401,7 +2405,7 @@ PushArgFrame(BobCompiler *c, ATABLE *atable)
 /* PopArgFrame - push an argument frame off the stack */
 static void
 PopArgFrame(BobCompiler *c)
-{
+{ F_ENTER;
     ARGUMENT *arg, *nxt;
 
     for (arg = c->arguments->at_arguments; arg != NULL; arg = nxt) {
@@ -2415,7 +2419,7 @@ PopArgFrame(BobCompiler *c)
 /* FreeArguments - free all argument frames */
 static void
 FreeArguments(BobCompiler *c)
-{
+{ F_ENTER;
     while (c->arguments) {
         PopArgFrame(c);
     }
@@ -2424,7 +2428,7 @@ FreeArguments(BobCompiler *c)
 /* FindArgument - find an argument offset */
 static int
 FindArgument(BobCompiler *c, char *name, int *plev, int *poff)
-{
+{ F_ENTER;
     ATABLE   *table;
     ARGUMENT *arg;
     int      lev;
@@ -2454,7 +2458,7 @@ FindArgument(BobCompiler *c, char *name, int *plev, int *poff)
 /* addliteral - add a literal to the literal vector */
 static int
 addliteral(BobCompiler *c, BobValue lit)
-{
+{ F_ENTER;
     long p;
 
     for (p = c->lbase; p < c->lptr; ++p) {
@@ -2475,14 +2479,14 @@ addliteral(BobCompiler *c, BobValue lit)
 /* frequire - fetch a BobToken and check it */
 static void
 frequire(BobCompiler *c, int rtkn)
-{
+{ F_ENTER;
     require(c, BobToken(c), rtkn);
 }
 
 /* require - check for a required BobToken */
 static void
 require(BobCompiler *c, int tkn, int rtkn)
-{
+{ F_ENTER;
     char tknbuf[100];
 
     if (tkn != rtkn) {
@@ -2498,7 +2502,7 @@ require(BobCompiler *c, int tkn, int rtkn)
 /* do_lit_integer - compile a literal integer */
 static void
 do_lit_integer(BobCompiler *c, BobIntegerType n)
-{
+{ F_ENTER;
     code_literal(c, addliteral(c, BobMakeInteger(c->ic, n)));
 }
 
@@ -2507,7 +2511,7 @@ do_lit_integer(BobCompiler *c, BobIntegerType n)
 
 static void
 do_lit_float(BobCompiler *c, BobFloatType n)
-{
+{ F_ENTER;
     code_literal(c, addliteral(c, BobMakeFloat(c->ic, n)));
 }
 
@@ -2516,35 +2520,35 @@ do_lit_float(BobCompiler *c, BobFloatType n)
 /* do_lit_string - compile a literal string */
 static void
 do_lit_string(BobCompiler *c, char *str)
-{
+{ F_ENTER;
     code_literal(c, make_lit_string(c, str));
 }
 
 /* do_lit_symbol - compile a literal symbol */
 static void
 do_lit_symbol(BobCompiler *c, char *pname)
-{
+{ F_ENTER;
     code_literal(c, make_lit_symbol(c, pname));
 }
 
 /* make_lit_string - make a literal string */
 static int
 make_lit_string(BobCompiler *c, char *str)
-{
+{ F_ENTER;
     return addliteral(c, BobMakeCString(c->ic, str));
 }
 
 /* make_lit_symbol - make a literal reference to a symbol */
 static int
 make_lit_symbol(BobCompiler *c, char *pname)
-{
+{ F_ENTER;
     return addliteral(c, BobInternCString(c->ic, pname));
 }
 
 /* variable_ref - compile a variable reference */
 static void
 variable_ref(BobCompiler *c, char *name)
-{
+{ F_ENTER;
     PVAL pv;
 
     findvariable(c, name, &pv);
@@ -2555,7 +2559,7 @@ variable_ref(BobCompiler *c, char *name)
 /* findvariable - find a variable */
 static void
 findvariable(BobCompiler *c, char *id, PVAL *pv)
-{
+{ F_ENTER;
     int lev;
     int off;
 
@@ -2581,7 +2585,7 @@ findvariable(BobCompiler *c, char *id, PVAL *pv)
 /* code_constant - compile a constant reference */
 static void
 code_constant(BobCompiler *c, int fcn, PVAL *pv)
-{
+{ F_ENTER;
     switch (fcn) {
 
     case LOAD:
@@ -2597,7 +2601,7 @@ code_constant(BobCompiler *c, int fcn, PVAL *pv)
 /* load_argument - compile code to load an argument */
 static int
 load_argument(BobCompiler *c, char *name)
-{
+{ F_ENTER;
     int lev;
     int off;
 
@@ -2615,7 +2619,7 @@ load_argument(BobCompiler *c, char *name)
 /* code_argument - compile an argument (environment) reference */
 static void
 code_argument(BobCompiler *c, int fcn, PVAL *pv)
-{
+{ F_ENTER;
     switch (fcn) {
 
     case LOAD:
@@ -2635,7 +2639,7 @@ code_argument(BobCompiler *c, int fcn, PVAL *pv)
 /* code_property - compile a property reference */
 static void
 code_property(BobCompiler *c, int fcn, PVAL *pv)
-{
+{ F_ENTER;
     switch (fcn) {
 
     case LOAD:
@@ -2659,7 +2663,7 @@ code_property(BobCompiler *c, int fcn, PVAL *pv)
 /* code_variable - compile a variable reference */
 static void
 code_variable(BobCompiler *c, int fcn, PVAL *pv)
-{
+{ F_ENTER;
     switch (fcn) {
 
     case LOAD:
@@ -2677,7 +2681,7 @@ code_variable(BobCompiler *c, int fcn, PVAL *pv)
 /* code_index - compile an indexed reference */
 static void
 code_index(BobCompiler *c, int fcn, PVAL *pv)
-{
+{ F_ENTER;
     switch (fcn) {
 
     case LOAD:
@@ -2701,7 +2705,7 @@ code_index(BobCompiler *c, int fcn, PVAL *pv)
 /* code_literal - compile a literal reference */
 static void
 code_literal(BobCompiler *c, int n)
-{
+{ F_ENTER;
     putcbyte(c, BobOpLIT);
     putcword(c, n);
 }
@@ -2709,14 +2713,14 @@ code_literal(BobCompiler *c, int n)
 /* codeaddr - get the current code address (actually, offset) */
 static int
 codeaddr(BobCompiler *c)
-{
+{ F_ENTER;
     return c->cptr - c->cbase;
 }
 
 /* putcbyte - put a code byte into the code buffer */
 static int
 putcbyte(BobCompiler *c, int b)
-{
+{ F_ENTER;
     int addr = codeaddr(c);
 
     if (c->cptr >= c->ctop) {
@@ -2731,7 +2735,7 @@ putcbyte(BobCompiler *c, int b)
 /* putcword - put a code word into the code buffer */
 static int
 putcword(BobCompiler *c, int w)
-{
+{ F_ENTER;
     int addr = codeaddr(c);
 
     if (c->cptr >= c->ctop) {
@@ -2752,7 +2756,7 @@ putcword(BobCompiler *c, int w)
 /* fixup - fixup a reference chain */
 static void
 fixup(BobCompiler *c, int chn, int val)
-{
+{ F_ENTER;
     int hval;
     int nxt;
 

@@ -87,6 +87,8 @@ Usage(void);
 int
 main(int argc, char **argv)
 {
+    F_ENTER;
+
     int             interactiveP = TRUE;
     BobUnwindTarget target;
     BobInterpreter  *c;
@@ -146,6 +148,11 @@ main(int argc, char **argv)
                     Usage();
                     break;
 
+                case 'd':
+                    c -> debug = 1;
+                    c -> compiler -> debug = 1;
+                    break;
+
                 case 'c':   /* compile source file */
                     if (argv[i][2]) {
                         inputName = &argv[i][2];
@@ -181,6 +188,8 @@ main(int argc, char **argv)
                     break;
 
                 case 'v':   /* display values of expressions loaded */
+                    c -> verbose = 1;
+                    c -> compiler -> verbose = 1;
                     verboseP = TRUE;
                     break;
 
@@ -213,6 +222,8 @@ main(int argc, char **argv)
 static void
 CompileFile(BobInterpreter *c, char *inputName, char *outputName)
 {
+    F_ENTER;
+
     char iname[1024];
     char oname[1024];
     char *p;
@@ -256,6 +267,8 @@ CompileFile(BobInterpreter *c, char *inputName, char *outputName)
 static void
 LoadFile(BobInterpreter *c, char *name, int verboseP)
 {
+    F_ENTER;
+
     BobStream *s = verboseP ? c->standardOutput : NULL;
     char      *ext;
 
@@ -285,6 +298,8 @@ LoadFile(BobInterpreter *c, char *name, int verboseP)
 static void
 ReadEvalPrint(BobInterpreter *c)
 {
+    F_ENTER;
+
     char     lineBuffer[256];
     BobValue val;
 
@@ -315,6 +330,8 @@ ReadEvalPrint(BobInterpreter *c)
 void
 ErrorHandler(BobInterpreter *c, int code, va_list ap)
 {
+    F_ENTER;
+
     switch (code) {
 
     case BobErrExit:
@@ -338,6 +355,8 @@ ErrorHandler(BobInterpreter *c, int code, va_list ap)
 static void
 Usage(void)
 {
+    F_ENTER;
+
     fprintf(
             stderr, "\
 usage: bob [-c file]     compile a source file\n\
