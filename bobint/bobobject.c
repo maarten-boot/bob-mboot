@@ -54,6 +54,7 @@ BIF_initialize(BobInterpreter *c)
 {
     BobCheckArgCnt(c, 2);
     BobCheckType(c, 1, BobObjectP);
+
     return BobGetArg(c, 1);
 }
 
@@ -62,7 +63,9 @@ static BobValue
 BIF_Class(BobInterpreter *c)
 {
     BobValue obj;
+
     BobParseArguments(c, "V=*", &obj, &BobObjectDispatch);
+
     return BobObjectClass(obj);
 }
 
@@ -71,7 +74,9 @@ static BobValue
 BIF_Clone(BobInterpreter *c)
 {
     BobValue obj;
+
     BobParseArguments(c, "V=*", &obj, &BobObjectDispatch);
+
     return BobCloneObject(c, obj);
 }
 
@@ -79,14 +84,19 @@ BIF_Clone(BobInterpreter *c)
 static BobValue
 BIF_Exists(BobInterpreter *c)
 {
-    BobValue obj, tag;
+    BobValue obj;
+    BobValue tag;
+
     BobParseArguments(c, "V=*V", &obj, &BobObjectDispatch, &tag);
+
     while (BobObjectP(obj)) {
         if (BobFindProperty(c, obj, tag, NULL, NULL)) {
             return c->trueValue;
         }
+
         obj = BobObjectClass(obj);
     }
+
     return c->falseValue;
 }
 
@@ -94,8 +104,11 @@ BIF_Exists(BobInterpreter *c)
 static BobValue
 BIF_ExistsLocally(BobInterpreter *c)
 {
-    BobValue obj, tag;
+    BobValue obj;
+    BobValue tag;
+
     BobParseArguments(c, "V=*V", &obj, &BobObjectDispatch, &tag);
+
     return BobToBoolean(c, BobFindProperty(c, obj, tag, NULL, NULL) != NULL);
 }
 
@@ -103,25 +116,34 @@ BIF_ExistsLocally(BobInterpreter *c)
 static BobValue
 BIF_Send(BobInterpreter *c)
 {
-    BobIntegerType i, vcnt, argc;
+    BobIntegerType i;
+    BobIntegerType vcnt;
+    BobIntegerType argc;
     BobValue       argv;
+
     BobCheckArgMin(c, 4);
     BobCheckType(c, 1, BobObjectP);
     BobCheckType(c, BobArgCnt(c), BobVectorP);
+
     argv = BobGetArg(c, BobArgCnt(c));
     if (BobMovedVectorP(argv)) {
         argv = BobVectorForwardingAddr(argv);
     }
+
     vcnt = BobVectorSizeI(argv);
     argc = BobArgCnt(c) + vcnt - 2;
+
     BobCheck(c, argc + 1);
     BobPush(c, BobGetArg(c, 1));
     BobPush(c, BobGetArg(c, 3));
     BobPush(c, BobGetArg(c, 1));
+
     for (i = 4; i < BobArgCnt(c); ++i)
         BobPush(c, BobGetArg(c, i));
+
     for (i = 0; i < vcnt; ++i)
         BobPush(c, BobVectorElementI(argv, i));
+
     return BobInternalSend(c, argc);
 }
 
@@ -130,19 +152,29 @@ static BobValue
 BIF_Show(BobInterpreter *c)
 {
     BobStream *s = c->standardOutput;
-    BobValue  obj, props;
+
+    BobValue  obj;
+    BobValue  props;
+
     BobParseArguments(c, "V=*|P=", &obj, &BobObjectDispatch, &s, BobFileDispatch);
+
     props = BobObjectProperties(obj);
+
     BobStreamPutS("Class: ", s);
     BobPrint(c, BobObjectClass(obj), s);
     BobStreamPutC('\n', s);
+
     if (BobObjectPropertyCount(obj)) {
+
         BobStreamPutS("Properties:\n", s);
+
         if (BobHashTableP(props)) {
             BobIntegerType cnt = BobHashTableSize(props);
             BobIntegerType i;
+
             for (i = 0; i < cnt; ++i) {
                 BobValue prop = BobHashTableElement(props, i);
+
                 for (; prop != c->nilValue; prop = BobPropertyNext(prop)) {
                     BobStreamPutS("  ", s);
                     BobPrint(c, BobPropertyTag(prop), s);
@@ -162,6 +194,7 @@ BIF_Show(BobInterpreter *c)
             }
         }
     }
+
     return obj;
 }
 
@@ -213,10 +246,12 @@ int
 BobGetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue)
 {
     while (!BobGetProperty1(c, obj, tag, pValue)) {
+
         if (!BobObjectP(obj) || (obj = BobObjectClass(obj)) == NULL) {
             return FALSE;
         }
     }
+
     return TRUE;
 }
 
@@ -225,10 +260,13 @@ static int
 GetObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue)
 {
     BobValue p;
+
     if (!(p = BobFindProperty(c, obj, tag, NULL, NULL))) {
         return FALSE;
     }
+
     *pValue = BobPropertyValue(p);
+
     return TRUE;
 }
 
@@ -238,11 +276,14 @@ SetObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value)
 {
     BobIntegerType hashValue, i;
     BobValue       p;
+
     if (!(p = BobFindProperty(c, obj, tag, &hashValue, &i))) {
         BobAddProperty(c, obj, tag, value, hashValue, i);
     }
-    else
+    else {
         BobSetPropertyValue(p, value);
+    }
+
     return TRUE;
 }
 
@@ -266,12 +307,15 @@ BobValue
 BobMakeObject(BobInterpreter *c, BobValue parent)
 {
     BobValue new;
+
     BobCPush(c, parent);
     new = BobAllocate(c, sizeof(BobObject));
+
     BobSetDispatch(new, &BobObjectDispatch);
     BobSetObjectClass(new, BobPop(c));
     BobSetObjectProperties(new, c->nilValue);
     BobSetObjectPropertyCount(new, 0);
+
     return new;
 }
 
@@ -280,17 +324,23 @@ BobValue
 BobCloneObject(BobInterpreter *c, BobValue obj)
 {
     BobValue properties;
+
     BobCheck(c, 2);
     BobPush(c, obj);
     BobPush(c, BobMakeObject(c, BobObjectClass(obj)));
+
     properties = BobObjectProperties(c->sp[1]);
-    if (BobHashTableP(properties))
+
+    if (BobHashTableP(properties)) {
         BobSetObjectProperties(BobTop(c), CopyPropertyTable(c, properties));
-    else
+    } else {
         BobSetObjectProperties(BobTop(c), CopyPropertyList(c, properties));
+    }
+
     BobSetObjectPropertyCount(BobTop(c), BobObjectPropertyCount(c->sp[1]));
     obj = BobPop(c);
     BobDrop(c, 1);
+
     return obj;
 }
 
@@ -299,13 +349,16 @@ BobValue
 BobFindProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobIntegerType *pHashValue, BobIntegerType *pIndex)
 {
     BobValue p = BobObjectProperties(obj);
+
     if (BobHashTableP(p)) {
         BobIntegerType hashValue = BobHashValue(tag);
         BobIntegerType i         = hashValue & (BobHashTableSize(p) - 1);
         p = BobHashTableElement(p, i);
+
         if (pHashValue) {
             *pHashValue = hashValue;
         }
+
         if (pIndex) {
             *pIndex = i;
         }
@@ -315,11 +368,13 @@ BobFindProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobIntegerType *p
             *pIndex = -1;
         }
     }
+
     for (; p != c->nilValue; p = BobPropertyNext(p)) {
         if (BobEql(BobPropertyTag(p), tag)) {
             return p;
         }
     }
+
     return NULL;
 }
 
@@ -332,11 +387,13 @@ CopyPropertyTable(BobInterpreter *c, BobValue table)
     BobCheck(c, 2);
     BobPush(c, BobMakeHashTable(c, size));
     BobPush(c, table);
+
     for (i = 0; i < size; ++i) {
         BobValue properties = CopyPropertyList(c, BobHashTableElement(BobTop(c), i));
         BobSetHashTableElement(c->sp[1], i, properties);
     }
     BobDrop(c, 1);
+
     return BobPop(c);
 }
 
@@ -347,12 +404,15 @@ CopyPropertyList(BobInterpreter *c, BobValue plist)
     BobCheck(c, 2);
     BobPush(c, c->nilValue);
     BobPush(c, plist);
+
     for (; BobTop(c) != c->nilValue; BobSetTop(c, BobPropertyNext(BobTop(c)))) {
         BobValue new = BobMakeProperty(c, BobPropertyTag(BobTop(c)), BobPropertyValue(BobTop(c)));
         BobSetPropertyNext(new, c->sp[1]);
         c->sp[1] = new;
     }
+
     BobDrop(c, 1);
+
     return BobPop(c);
 }
 
@@ -366,8 +426,10 @@ BobAddProperty(
     BobCPush(c, obj);
     p   = BobMakeProperty(c, tag, value);
     obj = BobPop(c);
+
     if (i >= 0) {
         BobIntegerType currentSize = BobHashTableSize(BobObjectProperties(obj));
+
         if (BobObjectPropertyCount(obj) >= currentSize * BobHashTableExpandThreshold) {
             BobCheck(c, 2);
             BobPush(c, obj);
@@ -376,6 +438,7 @@ BobAddProperty(
             p   = BobPop(c);
             obj = BobPop(c);
         }
+
         BobSetPropertyNext(p, BobHashTableElement(BobObjectProperties(obj), i));
         BobSetHashTableElement(BobObjectProperties(obj), i, p);
     }
@@ -388,6 +451,7 @@ BobAddProperty(
             BobSetObjectProperties(obj, p);
         }
     }
+
     IncObjectPropertyCount(obj);
 }
 
@@ -400,10 +464,12 @@ CreateHashTable(BobInterpreter *c, BobValue obj, BobValue p)
     BobCheck(c, 2);
     BobPush(c, p);
     BobPush(c, obj);
+
     table = BobMakeHashTable(c, BobHashTableCreateThreshold);
     obj   = BobPop(c);
     p     = BobObjectProperties(obj);
     BobSetObjectProperties(obj, table);
+
     while (p != c->nilValue) {
         BobValue next = BobPropertyNext(p);
         i = BobHashValue(BobPropertyTag(p)) & (BobHashTableCreateThreshold - 1);
@@ -411,8 +477,10 @@ CreateHashTable(BobInterpreter *c, BobValue obj, BobValue p)
         BobSetHashTableElement(table, i, p);
         p = next;
     }
+
     p     = BobPop(c);
     i     = BobHashValue(BobPropertyTag(p)) & (BobHashTableCreateThreshold - 1);
+
     BobSetPropertyNext(p, BobHashTableElement(table, i));
     BobSetHashTableElement(table, i, p);
 }
@@ -423,19 +491,26 @@ ExpandHashTable(BobInterpreter *c, BobValue obj, BobIntegerType hashValue)
 {
     BobIntegerType oldSize, newSize;
     oldSize = BobHashTableSize(BobObjectProperties(obj));
+
     newSize = oldSize << 1;
+
     if (newSize <= BobHashTableExpandMaximum) {
-        BobValue       oldTable, newTable;
+        BobValue       oldTable;
+        BobValue       newTable;
+
         BobIntegerType j;
         BobPush(c, obj);
         newTable = BobMakeHashTable(c, newSize);
         oldTable = BobObjectProperties(BobTop(c));
+
         for (j   = 0; j < oldSize; ++j) {
             BobValue p    = BobHashTableElement(oldTable, j);
             BobValue new0 = c->nilValue;
             BobValue new1 = c->nilValue;
+
             while (p != c->nilValue) {
                 BobValue next = BobPropertyNext(p);
+
                 if (BobHashValue(BobPropertyTag(p)) & oldSize) {
                     BobSetPropertyNext(p, new1);
                     new1 = p;
@@ -446,11 +521,14 @@ ExpandHashTable(BobInterpreter *c, BobValue obj, BobIntegerType hashValue)
                 }
                 p             = next;
             }
+
             BobSetHashTableElement(newTable, j, new0);
             BobSetHashTableElement(newTable, j + oldSize, new1);
         }
+
         BobSetObjectProperties(BobPop(c), newTable);
     }
+
     return hashValue & (newSize - 1);
 }
 
@@ -491,8 +569,10 @@ static void
 PropertyScan(BobInterpreter *c, BobValue obj)
 {
     long i;
-    for (i = 0; i < BobPropertySize; ++i)
+
+    for (i = 0; i < BobPropertySize; ++i)  {
         BobSetFixedVectorElement(obj, i, BobCopyValue(c, BobFixedVectorElement(obj, i)));
+    }
 }
 
 /* BobMakeProperty - make a property */
@@ -500,11 +580,14 @@ BobValue
 BobMakeProperty(BobInterpreter *c, BobValue key, BobValue value)
 {
     BobValue new;
+
     BobCheck(c, 2);
     BobPush(c, value);
     BobPush(c, key);
+
     new = BobMakeFixedVectorValue(c, &BobPropertyDispatch, BobPropertySize);
     SetPropertyTag(new, BobPop(c));
     BobSetPropertyValue(new, BobPop(c));
+
     return new;
 }

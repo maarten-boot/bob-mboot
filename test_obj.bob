@@ -8,9 +8,12 @@ define t.initialize() {
     this.b = nil;
 }
 
+stdout.Display(t, t.Class() , t.Show(), "\n");
+
+
 t.a = 2;
-t2 = new t;
+t2 =  t.Clone();
 t.a = 3;
 
 stdout.Display(t, "\n");
-stdout.Display(t2, t2.a, "\n");
+stdout.Display(t2, t2.a, t2.b, "\n");

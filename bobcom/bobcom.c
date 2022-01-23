@@ -2272,6 +2272,7 @@ do_call(BobCompiler *c, PVAL *pv)
 static void
 do_super(BobCompiler *c, PVAL *pv)
 { F_ENTER;
+
     /* object is 'this' */
     if (!load_argument(c, "this")) {
         BobParseError(c, "Use of super outside of a method");

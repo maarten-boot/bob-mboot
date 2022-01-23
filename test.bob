@@ -1,5 +1,17 @@
 #! ./bin/bob
 
+define test1(what) {
+    result = what();
+    stdout.Display(result ,"\n");
+}
+
+define t1() {
+    1 + 1 == 2;
+}
+
+test1(t1);
+
+
 // testing continue in a while block
 define while_continue() {
     i = 0;
