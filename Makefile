@@ -4,6 +4,7 @@ BINDIR=./bin
 LIBDIR=./lib
 OBJDIR=./obj
 HDRDIR=./include
+TESTDIR=./test
 
 DIRS=$(BINDIR) $(LIBDIR) $(OBJDIR)
 
@@ -13,7 +14,10 @@ HDRS=$(HDRDIR)/bob.h $(HDRDIR)/bobint.h $(HDRDIR)/bobcom.h
 
 WFLAGS=-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers -Wimplicit-fallthrough=2
 XINCLUDES=-I$(HDRDIR) -I./bobcom -I./bobint
-XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT -DWITH_TRACE
+
+#XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT -DWITH_TRACE
+XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT
+
 CFLAGS=$(XCFLAGS) $(WFLAGS) $(XINCLUDES) $(XDEFINES)
 
 all:	$(DIRS) $(PROGS) $(LIBS)
@@ -141,8 +145,10 @@ clean:	$(DIRS)
 	rm -rf $(OBJDIR)
 
 # test direct and compile , interpreter
-test: $(BOBFILES)
-	./bin/bob -v -d test.bob 				>out1.txt
-	./bin/bobc -v -d -o test.bbo test.bob 	>out2.txt
-	./bin/bobi -v -d test.bbo 				>out3.txt
-	rm test.bbo
+$TESTDIR/test.bbo: $(BOBFILES)
+	./bin/bob  -v -d ./test/test.bob >./test/out1.txt
+	./bin/bobc -v -d -o ./test/test.bbo ./test/test.bob >./test/out2.txt
+	./bin/bobi -v -d ./test/test.bbo >./test/out3.txt
+	rm ./test/test.bbo
+
+test: $TESTDIR/test.bbo
