@@ -142,7 +142,7 @@ clean:	$(DIRS)
 
 # test direct and compile , interpreter
 test: $(BOBFILES)
-	./bin/bob -v -d test.bob >out.txt
-	# ./bin/bobc -o test.bbo test.bob
-	# ./bin/bobi test.bbo
-	# rm test.bbo
+	./bin/bob -v -d test.bob 				>out1.txt
+	./bin/bobc -v -d -o test.bbo test.bob 	>out2.txt
+	./bin/bobi -v -d test.bbo 				>out3.txt
+	rm test.bbo

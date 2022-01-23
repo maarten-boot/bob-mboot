@@ -114,31 +114,31 @@ The Bob Programming Language
 Every thing below here:
 Old syntax, no longer valid, this was from bob1.2 (1991-sept)
 
-Table 1: Bob syntax
+Bob1.2 syntax:
 
 optional element: [  ]
 repeating element ...
 < meta name >
 
-Class Definition
+Class Definition:
 
     class<class-name>[:<base-class-name>]
     { <member-definition>... }
 
-Member Definition
+Member Definition:
 
-    <variable-name>... ;
-    static<variable-name>... ;
-    <function-name>( [<formal-argument-list>] ) ;
+    <variable-name> ... ;
+    static <variable-name> ... ;
+    <function-name> ( [<formal-argument-list>] ) ;
     static <function-name> ( [<formal-argument-list>] ) ;
 
-Function Definition
+Function Definition:
 
     define [ <class-name> . ] <function-name>
     ( [<formal-argument-list> [ ; <temporary-list> ] ] )
     { <statement>... }
 
-Statement
+Statement:
 
     if ( <test-expression> ) <then-statement> [ else <else-statement> ] ;
     while ( <test-expression> ) <body-statement>
@@ -153,6 +153,7 @@ Statement
     { <statement>... }
 
 Expression:
+
     <expression> , <expression>
 
     <lvalue> =  <expression>
@@ -197,7 +198,7 @@ Expression:
     <lvalue> --
 
     new <class-name> ( [<constructor-arguments>] )
-    <expression>( [<arguments>] )
+    <expression> ( [<arguments>] )
     <expression> -> <function-name> ( [<arguments>] )
 
     ( <expression> )

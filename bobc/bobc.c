@@ -11,25 +11,9 @@
 #include "bob.h"
 #include "bobcom.h"
 
-#if 0
-
 #define INTERPRETER_SIZE    (1024 * 1024)
 #define COMPILER_SIZE       (1024 * 1024)
 #define STACK_SIZE          (64 * 1024)
-
-// #define HEAP_SIZE           (1024 * 1024)
-// #define EXPAND_SIZE         (512 * 1024)
-
-#else
-
-#define INTERPRETER_SIZE    (20 * 1024)
-#define COMPILER_SIZE       (8 * 1024)
-#define STACK_SIZE          (2 * 1024)
-
-// #define HEAP_SIZE           (20 * 1024)
-// #define EXPAND_SIZE         (10 * 1024)
-
-#endif
 
 /* console stream structure */
 typedef struct
@@ -141,10 +125,19 @@ main(int argc, char **argv)
     BobUseEval(c, compilerSpace, sizeof(compilerSpace));
 
     /* process arguments */
-    // todo: add -v for verbose messages and a flag to show the compiled code
     for (i = 1; i < argc; ++i) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
+
+            case 'v':
+                c -> verbose = 1;
+                c -> compiler -> verbose = 1;
+                break;
+
+            case 'd':
+                c -> debug = 1;
+                c -> compiler -> debug = 1;
+                break;
 
             case 'o':
                 if (argv[i][2]) {
@@ -190,6 +183,7 @@ CompileFile(BobInterpreter *c, char *inputName, char *outputName)
     if (!outputName) {
         // if we have no output file name,
         // derive it from the input file and add .bbo at the end
+
         if ((p = strrchr(inputName, '.')) == NULL) {
             strcpy(oname, inputName);
         }
@@ -204,8 +198,9 @@ CompileFile(BobInterpreter *c, char *inputName, char *outputName)
     }
 
     /* compile the file */
-    // TODO: if verbose
-    printf("Compiling '%s' -> '%s'\n", inputName, outputName);
+    if( c-> verbose) {
+        printf("Compiling '%s' -> '%s'\n", inputName, outputName);
+    }
 
     BobCompileFile(c, inputName, outputName);
 }
@@ -214,6 +209,6 @@ CompileFile(BobInterpreter *c, char *inputName, char *outputName)
 static void
 Usage(void)
 {
-    fprintf(stderr, "usage: bobc [-o outputFile] file\n");
+    fprintf(stderr, "usage: bobc [-v] [-d] [-o outputFile] file\n");
     exit(1);
 }

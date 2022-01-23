@@ -9,25 +9,12 @@
 
 #include "bob.h"
 
-#if 1
-
 #define INTERPRETER_SIZE    (1024 * 1024)
 #define COMPILER_SIZE       (1024 * 1024)
 #define STACK_SIZE          (64 * 1024)
 
-// #define HEAP_SIZE           (1024 * 1024)
-// #define EXPAND_SIZE         (512 * 1024)
-
-#else
-
-#define INTERPRETER_SIZE    (20 * 1024)
-#define COMPILER_SIZE       (8 * 1024)
-#define STACK_SIZE          (2 * 1024)
-
-// #define HEAP_SIZE           (20 * 1024)
-// #define EXPAND_SIZE         (10 * 1024)
-
-#endif
+static void
+Usage(void);
 
 /* console stream structure */
 typedef struct
@@ -68,7 +55,6 @@ ConsoleStream consoleStream = {&consoleDispatch};
 
 /* space for interpreter */
 static char interpreterSpace[INTERPRETER_SIZE];
-// static char compilerSpace[COMPILER_SIZE];
 
 /* ErrorHandler - error handler callback */
 void
@@ -99,12 +85,6 @@ main(int argc, char **argv)
     BobUnwindTarget target;
     BobInterpreter  *c;
 
-    /* check the argument list */
-    if (argc != 2) {
-        fprintf(stderr, "usage: bobi <object-file>\n");
-        exit(1);
-    }
-
     /* make the workspace */
     if ((c = BobMakeInterpreter(interpreterSpace, sizeof(interpreterSpace), STACK_SIZE)) == NULL) {
         exit(1);
@@ -126,12 +106,6 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    /* initialize the workspace
-    if (!BobInitInterpreter(c, HEAP_SIZE, EXPAND_SIZE, STACK_SIZE)) {
-        exit(1);
-    }
-    */
-
     /* initialize the workspace */
     if (!BobInitInterpreter(c)) {
         exit(1);
@@ -143,8 +117,29 @@ main(int argc, char **argv)
     /* add the library functions to the symbol table */
     BobEnterLibrarySymbols(c);
 
-    /* load the command line argument */
-    BobLoadObjectFile(c, argv[1], NULL);
+    int i;
+    for (i = 1; i < argc; ++i) {
+        if (argv[i][0] == '-') {
+            switch (argv[i][1]) {
+
+            case 'v':
+                c -> verbose = 1;
+                break;
+
+            case 'd':
+                c -> debug = 1;
+                break;
+
+            default:
+                Usage();
+                break;
+            }
+        }
+        else {
+            /* load the command line argument */
+            BobLoadObjectFile(c, argv[i], NULL);
+        }
+    }
 
     /* catch errors and restart read/eval/print loop */
     BobUnwindCatch(c);
@@ -154,4 +149,14 @@ main(int argc, char **argv)
 
     /* return successfully */
     return 0;
+}
+
+/* Usage - display a usage message and exit */
+static void
+Usage(void)
+{
+    F_ENTER;
+
+    fprintf(stderr, "usage: bobi [-v] [-d] <object-file>\n");
+    exit(1);
 }
