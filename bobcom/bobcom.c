@@ -530,6 +530,7 @@ define_method(BobCompiler *c, char *name)
     /* get the selector */
     for (;;) {
         frequire(c, T_IDENTIFIER);
+
         strcpy(selector, c->t_token);
 
         if ((tkn = BobToken(c)) != '.') {
@@ -653,10 +654,12 @@ compile_code(BobCompiler *c, char *name)
                 do_init_expr(c);
 
                 AddArgument(c, c->arguments, id);
+
                 putcbyte(c, BobOpESET);
                 putcbyte(c, 0);
                 putcbyte(c, cnt);
                 fixup(c, nxt, codeaddr(c));
+
                 tkn = BobToken(c);
             }
             else if (tkn == T_DOTDOT) {
@@ -841,39 +844,6 @@ do_for(BobCompiler *c)
     SENTRY bentry;
     SENTRY centry;
 
-    /* NOTE:
-     https://beginnersbook.com/2014/01/c-continue-statement/
-
-     currently a continue in a for will jump to before the 3th expression
-
-        normal;
-            for(expr-1; expr-2; expr-3) { body }
-
-        all expr can be empty:
-            for(;;) { body }
-
-        with break:
-            for(expr-1; expr-2; expr-3) { body-a; break; body-b: }
-                any body part can be empty
-                break jumbs unconditionally to after }
-
-        with continue:
-            for(expr-1; expr-2; expr-3) { body-a; continue; body-b: }
-                any body part can be empty
-                continue should jump to:
-
-        asuming for(a; b; c) { }
-
-        is identical to
-
-        a;
-        while(b) {
-            c;
-        }
-
-     */
-
-
     /* compile the initialization expression */
     frequire(c, '(');
     if ((tkn = BobToken(c)) != ';') {
@@ -995,10 +965,6 @@ remcontinue(BobCompiler *c)
 static void
 do_continue(BobCompiler *c)
 { F_ENTER;
-    /*
-     * Continue in a for statement skips to before the execution of the last term so  increments are not executed
-     * for(i=0; i<10; i++)) { continue; } // will loop forever
-    */
 
     if (! c->csp) {
         BobParseError(c, "Continue outside of loop");
@@ -1118,13 +1084,16 @@ do_case(BobCompiler *c)
 
         case '\\':
             switch (BobToken(c)) {
+
             case T_IDENTIFIER:
                 value = addliteral(c, BobInternCString(c->ic, c->t_token));
                 break;
+
             default:
                 BobParseError(c, "Expecting a literal symbol");
                 value = 0; /* never reached */
             }
+
             break;
 
         case T_INTEGER:
@@ -2274,6 +2243,7 @@ do_super(BobCompiler *c, PVAL *pv)
 { F_ENTER;
 
     /* object is 'this' */
+    /* if there is no this we are not in the context of a method */
     if (!load_argument(c, "this")) {
         BobParseError(c, "Use of super outside of a method");
     }

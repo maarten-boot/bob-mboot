@@ -318,6 +318,7 @@ rtoken(BobCompiler *c)
             case '=':
                 return T_DIVEQ;
 
+            /* comments could be moved to skipspaces */
             case '/':
                 /* handle // single single C++ style line comments */
                 while ((ch = getch(c)) != EOF) {

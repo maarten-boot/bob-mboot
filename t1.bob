@@ -57,3 +57,39 @@ define t16b() { local a = nil; stdout.Display(!a, " "); !a == true;}
 test1(t15, "t15");
 test1(t16a, "t16a");
 test1(t16b, "t16b");
+
+zz = function () { local a = 'a'; local b = "a"; stdout.Display(a," ", b[0], " ", b[0] = ++a,  " ", b ,"\n"); };
+zz();
+
+// do_literal: Expecting a symbol (identifier) , vector or object literal
+jj = \[ 5,7,8,9 ];
+qq = \{ };
+nn = \jj;
+
+stdout.Display(zz, " ", jj, " ", qq, " ", nn, "\n");
+
+jj[1] = 9;
+stdout.Display(jj, " ", qq, " ", nn, "\n");
+
+qq.a = 8;
+stdout.Display(jj, " ", qq.a, " ", nn, "\n");
+
+jj = \[ 1,2];
+stdout.Display(jj, " ", qq.a, " ", nn, "\n");
+
+p = nn;
+stdout.Display(p, \p);
+
+p3 = \{ aaa: 5, bbb: "bbb", qq: nil };
+stdout.Display(p3, " ", p3.aaa, "\n");
+
+p4 = \{ p3 nn3: 0 };
+stdout.Display(p4, " ", p4.aaa, "\n");
+stdout.Display(p4, " ", p4.nn3, "\n");
+
+define dotdot(a..) {
+    stdout.Display(a, "\n");
+    stdout.Display(a[0], "\n");
+}
+
+dotdot("abc", "def");
