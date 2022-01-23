@@ -2299,10 +2299,13 @@ do_new_object(BobCompiler *c, PVAL *pv)
 
     /* get the property */
     if ((tkn = BobToken(c)) == T_IDENTIFIER) {
+        fprintf(stderr, "Identifer: %s\n", c->t_token);
+
         variable_ref(c, c->t_token);
     }
     else if (tkn == '(') {
         do_expr(c);
+
         frequire(c, ')');
     }
     else {
@@ -2314,6 +2317,7 @@ do_new_object(BobCompiler *c, PVAL *pv)
 
     /* check for needing to call the 'initialize' method */
     if ((tkn = BobToken(c)) == '(') {
+        fprintf(stderr, "Identifer: %s\n", c->t_token);
         putcbyte(c, BobOpPUSH);
 
         code_literal(c, addliteral(c, BobInternCString(c->ic, "initialize")));
@@ -2323,9 +2327,8 @@ do_new_object(BobCompiler *c, PVAL *pv)
 
         do_method_call(c, pv);
     }
-
-        /* no 'initialize' call */
     else {
+        /* no 'initialize' call */
         BobSaveToken(c, tkn);
         pv->fcn = NULL;
     }

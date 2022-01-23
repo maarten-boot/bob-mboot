@@ -3,6 +3,23 @@ bob
 
 The Bob Programming Language
 
+Syntax:
+
+    primary:
+      <function>
+      \literal
+      ( expr1 )
+      integer
+      float
+      string
+      nil
+      variable
+      super
+      new
+      { block }
+
+
+
 == Tokens
 
     "<string>",

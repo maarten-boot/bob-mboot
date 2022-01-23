@@ -1,4 +1,4 @@
-XCFLAGS?=-m32
+# XCFLAGS?=-m32
 
 BINDIR=./bin
 LIBDIR=./lib

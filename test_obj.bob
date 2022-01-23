@@ -1,0 +1,16 @@
+#! ./bin/bob
+
+// create a new obj
+t = new Object();
+
+define t.initialize() {
+    this.a = nil;
+    this.b = nil;
+}
+
+t.a = 2;
+t2 = new t;
+t.a = 3;
+
+stdout.Display(t, "\n");
+stdout.Display(t2, t2.a, "\n");
