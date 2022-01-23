@@ -1197,6 +1197,7 @@ do_block(BobCompiler *c)
     int    tcnt = 0;
     int    tkn;
 
+    // =======================================
     /* handle local declarations */
     if ((tkn = BobToken(c)) == T_LOCAL) {
         int ptr;
@@ -1215,11 +1216,14 @@ do_block(BobCompiler *c)
             /* parse each variable and initializer */
             do {
                 char name[TKNSIZE + 1];
+
                 frequire(c, T_IDENTIFIER);
                 strcpy(name, c->t_token);
 
                 if ((tkn = BobToken(c)) == '=') {
+
                     do_init_expr(c);
+
                     putcbyte(c, BobOpESET);
                     putcbyte(c, 0);
                     putcbyte(c, 1 + tcnt);
@@ -1241,11 +1245,14 @@ do_block(BobCompiler *c)
         c->cbase[ptr] = tcnt;
     }
 
+    // =======================================
     /* compile the statements in the block */
     if (tkn != '}') {
         do {
             BobSaveToken(c, tkn);
+
             do_statement(c);
+
         } while ((tkn = BobToken(c)) != '}');
     }
     else {
@@ -1271,7 +1278,9 @@ do_return(BobCompiler *c)
     }
     else {
         BobSaveToken(c, tkn);
+
         do_expr(c);
+
         frequire(c, ';');
     }
 
@@ -1283,8 +1292,11 @@ do_return(BobCompiler *c)
 static void
 do_test(BobCompiler *c)
 {
+    // test as in if  <test>, while <test>, for( a; <test>; c)
     frequire(c, '(');
+
     do_expr(c);
+
     frequire(c, ')');
 }
 

@@ -117,12 +117,53 @@ define Pit.Bump(game)
 ///////////////////////////////////////////////
 ///////////////////////////////////////////////
 
-// ues a main function as im used to that ;-)
+define testVector() {
+    // locals have to be at the beginning and cannot be declared later in the code
+    local x = 1, y = 2 , z = 3;
+    local b = "123";
+    local c = "123";
+
+    stdout.Display("\n test vector \n");
+
+    {
+        local pp = 6, x = 8;
+        stdout.Display(pp, " ", x, "\n");
+    }
+
+    stdout.Display(pp, " ", x, "\n");
+    b = "abcdefg";
+
+    bb = new Object;
+    bb.x = 99;
+
+    define aaa() { bb.x = 999; };
+
+    stdout.Display(bb, "\n");
+    stdout.Display(bb.x, "\n");
+    aaa();
+    stdout.Display(bb.x, "\n");
+    // variables not declared local are global by default
+
+    a = b[ 4 ];
+    stdout.Display(b, " ", a, " ", b[5], "\n");
+
+    b[4] = 102;
+    a = b[ 4 ];
+    stdout.Display(b, " ", a, " ", b[5], "\n");
+
+    nn = 1, 2, 4;
+}
+
+// uses a main function as im used to that ;-)
 define main()
 {
     while_continue();
     for_continue();
     test_fibo();
+    v = testVector();
+
+    b = "zyxwvu";
+    stdout.Display(b, " ", a, " ", b[5], " ", v, "\n");
 }
 
 main();
