@@ -128,6 +128,70 @@ Syntax:
     #define BobOpARGSGE     0x35    /* argc greater than or equal to */
 
 
+https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+
+program =
+    { statement }       ;
+// Note: a program can be empty
+
+statement =
+    define_statement    |
+    if_statement        |
+    while_statement     |
+    do_while_statement  |
+    for_statement       |
+    switch_statement    |
+    return_statement    |
+    "{" statement "}"   |
+    expression ";"
+    ;
+
+define_statement =
+    "define"  [ identifier "." ] identifier "(" parameters ")" block
+    ;
+
+block =
+    "{" locals statement "}"
+    ;
+
+// the paramener list can be empty
+parameters =
+    parameter [ "," parameter ]
+    ;
+
+parameter =
+    [ identifier [ "=" expression ] ]
+    ;
+
+// note locals are optional but must be  at the beginning of a block
+locals =
+    local [ local ]
+    ;
+
+local =
+    identifier [ "=" expression ]
+    ;
+
+
+if_statement =
+
+while_statement =
+
+do_while_statement =
+
+for_statement =
+
+switch_statement =
+
+return_statement =
+
+expression =
+
+
+identifier =
+
+// note; a return statment by itself is a valid program
+
 Every thing below here:
 Old syntax, no longer valid, this was from bob1.2 (1991-sept)
 
@@ -137,37 +201,36 @@ optional element: [  ]
 repeating element ...
 < meta name >
 
-Class Definition:
-
-    class<class-name>[:<base-class-name>]
-    { <member-definition>... }
-
 Member Definition:
 
-    <variable-name> ... ;
-    static <variable-name> ... ;
+    [ local ] <variable-name> ... ;
     <function-name> ( [<formal-argument-list>] ) ;
-    static <function-name> ( [<formal-argument-list>] ) ;
 
 Function Definition:
 
-    define [ <class-name> . ] <function-name>
-    ( [<formal-argument-list> [ ; <temporary-list> ] ] )
-    { <statement>... }
+    define [ <class-name> . ] <function-name> ( [<formal-argument-list> [ ; <temporary-list> ] ] ) { <statement>... }
 
 Statement:
 
-    if ( <test-expression> ) <then-statement> [ else <else-statement> ] ;
-    while ( <test-expression> ) <body-statement>
-    do <body-statement> while <test-expression>) ;
-    for ( <init-expression> ; <test-expression> ; <increment-expression> ) <body-statement>
+    if ( <test-expression> ) <statement> [ else <statement> ] ;
+    while ( <test-expression> ) <statement>
+    do <statement> while ( <test-expression> );
+    for ( <init-expression> ; <test-expression> ; <increment-expression> ) <statement>
 
     break;
     continue;
 
-    return [ <result-expression> ] ;
+    return [ <expression> ] ;
     [ <expression> ] ;
     { <statement>... }
+
+--    "function",
+--    "switch",
+--    "case",
+--    "default",
+
+--    "super",
+--    ".."
 
 Expression:
 
@@ -205,6 +268,13 @@ Expression:
     <expression> / <expression>
     <expression> % <expression>
 
+    <expression> %= <expression>
+    <expression> &= <expression>
+    <expression> |= <expression>
+    <expression> ^= <expression>
+    <expression> <<= <expression>
+    <expression> >>= <expression>
+
     - <expression>
     ! <expression>
     ~ <expression>
@@ -223,3 +293,6 @@ Expression:
     <number>
     <string>
     nil
+
+--    "[",
+--    "]",

@@ -1,0 +1,69 @@
+#! ../bin/bob -v -d
+
+// define bb();
+// define must have a block, the block can be empty
+// parameters can be empty
+
+define ccc() {}
+define aaa() {}
+
+// a define does not have to be called, here we call it just to show its value
+aaa();
+
+// parameters can be initialized but dont have to be, they also dont need to be used
+
+define ddd(a = 0, b = 7)
+{
+    stdout.Display(a," ",b, "\n");
+    if(a == nil) {
+        b();
+    }
+    if(a == nil) {
+        b("hello there, i am the world you were looking for");
+    }
+}
+
+ddd();
+ddd(8, 9);
+// the type of the parameters will change if you pass parameters of a different type
+ddd(true, "abs");
+
+// functions can be passed as arguments
+define zzz(a="")
+{
+    stdout.Display(a, " in zzz\n");
+}
+
+// after passing the func we can call it inside the function by adding () and parameters if required/needed
+ddd(nil, zzz);
+
+define jjj() {
+    local p1 = 8;
+    local p4 = "jj";
+
+    a = p1;
+    // now locals are no longer allowed in this block, but in a sub block they are
+
+    // you can refer to variables you have never declared before
+    stdout.Display(p1, " ", p4, " ", p7, "\n");
+    {
+        local p1 = 7;
+        local p7 = true;
+
+        stdout.Display(p1, " ", p4, " ", p7, "\n");
+    }
+    // outside of the block where we declared p7 its value will be unknown so nil again
+    stdout.Display(p1, " ", p4, " ", p7, "\n");
+
+    p7 = 999;
+}
+
+jjj();
+
+// not that any variable not declared local is by definition global to this file, hence we now see the value of p7
+stdout.Display(p7, "\n");
+
+// each file is a implicit block
+// hence we can use return in a file wihout a encloding explicit block
+
+// and as each file acts as function it has a return value of the latest statement

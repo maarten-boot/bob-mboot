@@ -1,0 +1,20 @@
+test_obj.bob
+Class: <Object-004e4930>
+Properties:
+  printA: <Method-printA>
+  initialize: <Method-initialize>
+<Object-004e6850><Object-004e4930><Object-004e6850>
+Class: <Object-004e4930>
+Properties:
+  a: 2
+  printA: <Method-printA>
+  initialize: <Method-initialize>
+<Object-004e6850><Object-004e4930><Object-004e6850>
+<Object-004e6850>
+<Object-004e6f60> a 98
+Class: <Object-004e6850>
+Properties:
+  aaa: <Method-aaa>
+  b: 98
+  a: "a"
+a
