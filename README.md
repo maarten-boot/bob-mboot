@@ -130,9 +130,12 @@ Syntax:
 
 https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
 
-program =
-    { statement }       ;
+//  NOTE ALL KEYWORDS ARE LOWER CASE
+
 // Note: a program can be empty
+program =
+    { statement }
+    ;
 
 statement =
     define_statement    |
@@ -147,9 +150,10 @@ statement =
     ;
 
 define_statement =
-    "define"  [ identifier "." ] identifier "(" parameters ")" block
+    "define"  [ class_name "." ] function_name "(" parameters ")" block
     ;
 
+// not a block can be empty, blocks can be nested
 block =
     "{" locals statement "}"
     ;
@@ -160,7 +164,7 @@ parameters =
     ;
 
 parameter =
-    [ identifier [ "=" expression ] ]
+    [ variable_name [ "=" expression ] ]
     ;
 
 // note locals are optional but must be  at the beginning of a block
@@ -169,28 +173,68 @@ locals =
     ;
 
 local =
-    identifier [ "=" expression ]
+    [ variable_name [ "=" expression ] ";" ]
+    ;
+
+// note; a return statment by itself is a valid program
+return_statement =
+    "return" expression ";"
+    ;
+
+if_statement =
+    "if" "(" test_expression ")" statement [ "else" statement ]
+     ;
+
+test_expression =
+    expression
+    ;
+
+while_statement =
+    "while" "(" test_expression ")" while_statement
     ;
 
 
-if_statement =
-
-while_statement =
-
 do_while_statement =
+    "do" while_statement "while" test_expression ";"
+    ;
 
 for_statement =
+    "for" "(" init_expression ";" test_expression ";" modify_expression ")" for_statement
+    ;
+
+init_expression =
+    expression
+    ;
+
+modify_expression =
+    expression
+    ;
+
+// TODO:
+while_statement = // continue and break are valid statements here but yield no value by themselves
+
+// TODO:
+for_statement = // continue and break are valid statements here but yield no value by themselves
 
 switch_statement =
 
-return_statement =
-
 expression =
 
+classs_name =
+    identifier
+    ;
+
+function_name =
+    identifier
+    ;
+
+variable_name =
+    identifier
+    ;
 
 identifier =
 
-// note; a return statment by itself is a valid program
+
 
 Every thing below here:
 Old syntax, no longer valid, this was from bob1.2 (1991-sept)
