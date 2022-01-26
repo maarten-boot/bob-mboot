@@ -145,7 +145,7 @@ statement =
     for_statement       |
     switch_statement    |
     return_statement    |
-    "{" statement "}"   |
+    block               |
     expression ";"
     ;
 
@@ -160,11 +160,17 @@ block =
 
 // the paramener list can be empty
 parameters =
-    parameter [ "," parameter ]
+    parameter [ "," parameter ] |
+    parameter [ "," dotdot ]
     ;
 
 parameter =
     [ variable_name [ "=" expression ] ]
+    ;
+
+// a dot dot captures all remaining arguments passed and presents them inside the funtion as a array or values
+dotdot =
+    variable_name ".."
     ;
 
 // note locals are optional but must be  at the beginning of a block
@@ -211,13 +217,56 @@ modify_expression =
     ;
 
 // TODO:
-while_statement = // continue and break are valid statements here but yield no value by themselves
+// continue and break are valid statements here but yield no value by themselves
+while_statement =
+    statement       |
+    "break" ";"     |
+    "continue" ";"
+    ;
 
 // TODO:
-for_statement = // continue and break are valid statements here but yield no value by themselves
+// continue and break are valid statements here but yield no value by themselves
+for_statement =
+    statement       |
+    "break" ";"     |
+    "continue" ";"
+    ;
 
 switch_statement =
+    "switch" "(" expression ")" "{" case_or_default "}"
+    ;
 
+case_or_default =
+    default |
+    case_statment [ case_statment ]
+    ;
+
+// test for missing break
+case_statement =
+    "case" literal ":" statement [ "break" ";" ]
+    ;
+
+// test for missing break
+// test for default before case with missing break on default
+
+default =
+    "default" ":" statement [ "break" ";" ]
+    ;
+
+literal =
+    referenced_id |
+    integer |
+    float \
+    string |
+    nil
+    ;
+
+// a reference can be \var. \function, \method
+referenced_id =
+    "\" identifier
+    ;
+
+// references can also be to a object or array \[] , \{} to create anonymous arrays or objects
 expression =
 
 classs_name =
@@ -235,46 +284,11 @@ variable_name =
 identifier =
 
 
-
-Every thing below here:
-Old syntax, no longer valid, this was from bob1.2 (1991-sept)
-
-Bob1.2 syntax:
-
-optional element: [  ]
-repeating element ...
-< meta name >
-
-Member Definition:
-
-    [ local ] <variable-name> ... ;
-    <function-name> ( [<formal-argument-list>] ) ;
-
-Function Definition:
-
-    define [ <class-name> . ] <function-name> ( [<formal-argument-list> [ ; <temporary-list> ] ] ) { <statement>... }
-
-Statement:
-
-    if ( <test-expression> ) <statement> [ else <statement> ] ;
-    while ( <test-expression> ) <statement>
-    do <statement> while ( <test-expression> );
-    for ( <init-expression> ; <test-expression> ; <increment-expression> ) <statement>
-
-    break;
-    continue;
-
-    return [ <expression> ] ;
-    [ <expression> ] ;
-    { <statement>... }
-
---    "function",
 --    "switch",
 --    "case",
 --    "default",
 
 --    "super",
---    ".."
 
 Expression:
 

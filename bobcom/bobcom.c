@@ -715,9 +715,10 @@ compile_code(BobCompiler *c, char *name)
     c->cbase      = oldcbase;
     c->lptr       = c->lbase;
     c->lbase      = oldlbase;
-    c->bsp        = oldbsp;
-    c->csp        = oldcsp;
-    c->ssp        = oldssp;
+
+    c->bsp        = oldbsp; // break stack
+    c->csp        = oldcsp; // continue stack
+    c->ssp        = oldssp; // switch stack
     c->blockLevel = oldLevel;
 
     /* make a closure */
@@ -846,6 +847,7 @@ do_for(BobCompiler *c)
 
     /* compile the initialization expression */
     frequire(c, '(');
+
     if ((tkn = BobToken(c)) != ';') {
         BobSaveToken(c, tkn);
         do {
@@ -853,6 +855,7 @@ do_for(BobCompiler *c)
             do_expr2(c, &pv);
             rvalue(c, &pv);
         } while ((tkn = BobToken(c)) == ',');
+
         require(c, tkn, ';');
     }
 
@@ -865,6 +868,7 @@ do_for(BobCompiler *c)
     else {
         BobSaveToken(c, tkn);
         do_expr(c);
+
         frequire(c, ';');
     }
 
@@ -881,6 +885,7 @@ do_for(BobCompiler *c)
     if ((tkn = BobToken(c)) != ')') {
         BobSaveToken(c, tkn);
         do_expr(c);
+
         frequire(c, ')');
     }
 
@@ -897,6 +902,7 @@ do_for(BobCompiler *c)
     addcontinue(c, &centry, update);
 
     do_statement(c);
+
     end = rembreak(c);
 
     remcontinue(c);
@@ -912,17 +918,22 @@ do_for(BobCompiler *c)
 /* addbreak - add a break level to the stack */
 static void
 addbreak(BobCompiler *c, SENTRY *sentry, int lbl)
-{ F_ENTER;
+{
+    F_ENTER;
+
     sentry->level = c->blockLevel;
     sentry->label = lbl;
     sentry->next  = c->bsp;
+
     c->bsp        = sentry;
 }
 
 /* rembreak - remove a break level from the stack */
 static int
 rembreak(BobCompiler *c)
-{ F_ENTER;
+{
+    F_ENTER;
+
     int lbl = c->bsp->label;
 
     c->bsp = c->bsp->next;
@@ -988,17 +999,24 @@ UnwindStack(BobCompiler *c, int levels)
 /* addswitch - add a switch level to the stack */
 static void
 addswitch(BobCompiler *c, SWENTRY *swentry)
-{ F_ENTER;
+{
+    F_ENTER;
+
     swentry->nCases       = 0;
     swentry->cases        = NULL;
     swentry->defaultLabel = NIL;
     swentry->next         = c->ssp;
+
+    c-> ssp = swentry;
+    // shouldnt we push this swentry on the stack now ?
 }
 
 /* remswitch - remove a switch level from the stack */
 static void
 remswitch(BobCompiler *c)
-{ F_ENTER;
+{
+    F_ENTER;
+
     CENTRY *entry;
     CENTRY *next;
 
@@ -1015,12 +1033,20 @@ static void
 do_switch(BobCompiler *c)
 { F_ENTER;
     int     dispatch;
+
     int     end;
     int     cnt;
 
     SENTRY  bentry;
     SWENTRY swentry;
+
     CENTRY  *e;
+
+    /*
+        "switch" "(" expr ")" "{" statements "}"
+        case and break need a c -> ssp but that has not been done yet
+
+    */
 
     /* compile the test expression */
     do_test(c);
@@ -1033,7 +1059,10 @@ do_switch(BobCompiler *c)
     addswitch(c, &swentry);
     addbreak(c, &bentry, 0);
 
-    do_statement(c);
+    // do_statement(c);
+    /* compile the function body */
+    frequire(c, '{');
+    do_block(c);
 
     end = rembreak(c);
 
@@ -1073,7 +1102,9 @@ do_switch(BobCompiler *c)
 /* do_case - compile the 'case' statement */
 static void
 do_case(BobCompiler *c)
-{ F_ENTER;
+{
+    F_ENTER;
+
     if (c->ssp) {
         CENTRY **pNext;
         CENTRY *entry;
@@ -2736,6 +2767,7 @@ fixup(BobCompiler *c, int chn, int val)
 
     for (hval = val >> 8; chn != NIL; chn = nxt) {
         nxt = (c->cbase[chn] & 0xFF) | (c->cbase[chn + 1] << 8);
+
         c->cbase[chn]     = val;
         c->cbase[chn + 1] = hval;
     }

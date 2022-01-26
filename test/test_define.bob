@@ -92,3 +92,25 @@ z33(); // returns nil as we call return; with no value so nil is returned as it 
 // a undefined function cannot be called as AAA results in nil which cannot be called as function
 
 // AAA();
+
+// dotdot
+
+// define a func with a variable amount of arguments
+// .. must be the last parameter
+define func(a=9, b="gg", c..) {
+    stdout.Display(a," ", b, " ", c, "\n");
+}
+
+// use more arguments than we defined
+func(8,true,2,5,7);
+
+// funcioons can be redefined
+// define a func with a variable amount of arguments
+define func(p,q,r) {
+    stdout.Display(p," ", q, " ", r, "\n");
+}
+
+// use more arguments than we defined
+// but if we dont use .. we get to many argumante error during execution
+// func(8,true,2,5,7);
+func(8,true,2);

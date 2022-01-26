@@ -27,3 +27,9 @@ true
 10
 10
 nil
+<Method-func>
+8 true [2,5,7]
+true
+<Method-func>
+8 true 2
+true

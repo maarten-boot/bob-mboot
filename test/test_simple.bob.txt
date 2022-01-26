@@ -87,3 +87,8 @@ true
 ["abc","def"]
 abc
 true
+<Object-004ea250>
+[1,5,"9",nil,true]
+[1,5,"9",nil,true]
+Class: <Object-004e4930>
+<Object-004ea250>

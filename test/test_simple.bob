@@ -93,3 +93,8 @@ define dotdot(a..) {
 }
 
 dotdot("abc", "def");
+
+qq = \{ };
+nn = \[ 1,5,"9", nil, true ];;
+qq.Show();
+// nn.Show();  //Error: Object [1,5,"9",nil,true] has no method - Show
