@@ -9,7 +9,7 @@ do
 
     (
         echo "$i"
-        ./$i
+        ../bin/bob -v ./$i
     ) |
     tee $zz.txt
 done
