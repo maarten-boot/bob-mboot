@@ -8,85 +8,60 @@
 #include "bob.h"
 
 /* method handlers */
-static BobValue
-BIF_initialize(BobInterpreter *c);
+static BobValue BIF_initialize(BobInterpreter *c);
 
-static BobValue
-BIF_Clone(BobInterpreter *c);
+static BobValue BIF_Clone(BobInterpreter *c);
 
-static BobValue
-BIF_Push(BobInterpreter *c);
+static BobValue BIF_Push(BobInterpreter *c);
 
-static BobValue
-BIF_PushFront(BobInterpreter *c);
+static BobValue BIF_PushFront(BobInterpreter *c);
 
-static BobValue
-BIF_Pop(BobInterpreter *c);
+static BobValue BIF_Pop(BobInterpreter *c);
 
-static BobValue
-BIF_PopFront(BobInterpreter *c);
+static BobValue BIF_PopFront(BobInterpreter *c);
 
 /* virtual property methods */
-static BobValue
-BIF_size(BobInterpreter *c, BobValue obj);
+static BobValue BIF_size(BobInterpreter *c, BobValue obj);
 
-static void
-BIF_Set_size(BobInterpreter *c, BobValue obj, BobValue value);
+static void BIF_Set_size(BobInterpreter *c, BobValue obj, BobValue value);
 
 /* Vector methods */
-static BobCMethod methods[] = {
-        BobMethodEntry("initialize", BIF_initialize),
-        BobMethodEntry("Clone", BIF_Clone),
-        BobMethodEntry("Push", BIF_Push),
-        BobMethodEntry("PushFront", BIF_PushFront),
-        BobMethodEntry("Pop", BIF_Pop),
-        BobMethodEntry("PopFront", BIF_PopFront),
-        BobMethodEntry(0, 0)
-};
+static BobCMethod methods[] = {BobMethodEntry("initialize", BIF_initialize), BobMethodEntry("Clone", BIF_Clone),
+                               BobMethodEntry("Push", BIF_Push), BobMethodEntry("PushFront", BIF_PushFront),
+                               BobMethodEntry("Pop", BIF_Pop), BobMethodEntry("PopFront", BIF_PopFront),
+                               BobMethodEntry(0, 0)};
 
 /* Vector properties */
-static BobVPMethod properties[] = {
-        BobVPMethodEntry("size", BIF_size, BIF_Set_size),
-        BobVPMethodEntry(0, 0, 0)
-};
+static BobVPMethod properties[] = {BobVPMethodEntry("size", BIF_size, BIF_Set_size), BobVPMethodEntry(0, 0, 0)};
 
 /* prototypes */
-static BobValue
-ResizeVector(BobInterpreter *c, BobValue obj, BobIntegerType newSize);
+static BobValue ResizeVector(BobInterpreter *c, BobValue obj, BobIntegerType newSize);
 
 /* BobInitVector - initialize the 'Vector' object */
-void
-BobInitVector(BobInterpreter *c)
-{
-    c->vectorObject = BobEnterType(c, "Vector", &BobVectorDispatch);
+void BobInitVector(BobInterpreter *c) {
+    c->vectorObject = BobEnterType(BobGlobalScope(c), "Vector", &BobVectorDispatch);
     BobEnterMethods(c, c->vectorObject, methods);
     BobEnterVPMethods(c, c->vectorObject, properties);
 }
 
 /* BIF_initialize - built-in method 'initialize' */
-static BobValue
-BIF_initialize(BobInterpreter *c)
-{
-    long     size = 0;
+static BobValue BIF_initialize(BobInterpreter *c) {
+    long size = 0;
     BobValue obj;
     BobParseArguments(c, "V=*|i", &obj, &BobVectorDispatch, &size);
     return ResizeVector(c, obj, size);
 }
 
 /* BIF_Clone - built-in method 'Clone' */
-static BobValue
-BIF_Clone(BobInterpreter *c)
-{
+static BobValue BIF_Clone(BobInterpreter *c) {
     BobValue obj;
     BobParseArguments(c, "V=*", &obj, &BobVectorDispatch);
     return BobCloneVector(c, obj);
 }
 
 /* BIF_Push - built-in method 'Push' */
-static BobValue
-BIF_Push(BobInterpreter *c)
-{
-    BobValue       obj, val;
+static BobValue BIF_Push(BobInterpreter *c) {
+    BobValue obj, val;
     BobIntegerType size;
     BobParseArguments(c, "V=*V", &obj, &BobVectorDispatch, &val);
     size = BobVectorSize(obj);
@@ -100,15 +75,13 @@ BIF_Push(BobInterpreter *c)
 }
 
 /* BIF_PushFront - built-in method 'PushFront' */
-static BobValue
-BIF_PushFront(BobInterpreter *c)
-{
-    BobValue       obj, val, *p;
+static BobValue BIF_PushFront(BobInterpreter *c) {
+    BobValue obj, val, *p;
     BobIntegerType size;
     BobParseArguments(c, "V=*V", &obj, &BobVectorDispatch, &val);
     size = BobVectorSize(obj);
     BobCPush(c, val);
-    obj    = ResizeVector(c, obj, size + 1);
+    obj = ResizeVector(c, obj, size + 1);
     if (BobMovedVectorP(obj)) {
         obj = BobVectorForwardingAddr(obj);
     }
@@ -120,16 +93,13 @@ BIF_PushFront(BobInterpreter *c)
 }
 
 /* BIF_Pop - built-in method 'Pop' */
-static BobValue
-BIF_Pop(BobInterpreter *c)
-{
-    BobValue       obj, vector, val;
+static BobValue BIF_Pop(BobInterpreter *c) {
+    BobValue obj, vector, val;
     BobIntegerType size;
     BobParseArguments(c, "V=*", &obj, &BobVectorDispatch);
     if (BobMovedVectorP(obj)) {
         vector = BobVectorForwardingAddr(obj);
-    }
-    else {
+    } else {
         vector = obj;
     }
     size = BobVectorSizeI(vector);
@@ -142,16 +112,13 @@ BIF_Pop(BobInterpreter *c)
 }
 
 /* BIF_PopFront - built-in method 'PopFront' */
-static BobValue
-BIF_PopFront(BobInterpreter *c)
-{
-    BobValue       obj, vector, val, *p;
+static BobValue BIF_PopFront(BobInterpreter *c) {
+    BobValue obj, vector, val, *p;
     BobIntegerType size;
     BobParseArguments(c, "V=*", &obj, &BobVectorDispatch);
     if (BobMovedVectorP(obj)) {
         vector = BobVectorForwardingAddr(obj);
-    }
-    else {
+    } else {
         vector = obj;
     }
     size = BobVectorSizeI(vector);
@@ -167,16 +134,12 @@ BIF_PopFront(BobInterpreter *c)
 }
 
 /* BIF_size - built-in property 'size' */
-static BobValue
-BIF_size(BobInterpreter *c, BobValue obj)
-{
+static BobValue BIF_size(BobInterpreter *c, BobValue obj) {
     return BobMakeInteger(c, BobVectorSize(obj));
 }
 
 /* BIF_Set_size - built-in property 'size' */
-static void
-BIF_Set_size(BobInterpreter *c, BobValue obj, BobValue value)
-{
+static void BIF_Set_size(BobInterpreter *c, BobValue obj, BobValue value) {
     if (!BobIntegerP(value)) {
         BobTypeError(c, value);
     }
@@ -186,39 +149,24 @@ BIF_Set_size(BobInterpreter *c, BobValue obj, BobValue value)
 /* VECTOR */
 
 /* Vector handlers */
-static int
-GetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
+static int GetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
 
-static int
-SetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
+static int SetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
 
-static BobValue
-VectorNewInstance(BobInterpreter *c, BobValue parent);
+static BobValue VectorNewInstance(BobInterpreter *c, BobValue parent);
 
-static long
-VectorSize(BobValue obj);
+static long VectorSize(BobValue obj);
 
-static void
-VectorScan(BobInterpreter *c, BobValue obj);
+static void VectorScan(BobInterpreter *c, BobValue obj);
 
 /* Vector dispatch */
 BobDispatch BobVectorDispatch = {
-        "Vector",
-        &BobVectorDispatch,
-        GetVectorProperty,
-        SetVectorProperty,
-        VectorNewInstance,
-        BobDefaultPrint,
-        VectorSize,
-        BobDefaultCopy,
-        VectorScan,
-        BobDefaultHash
+        "Vector", &BobVectorDispatch, GetVectorProperty, SetVectorProperty, VectorNewInstance, BobDefaultPrint,
+        VectorSize, BobDefaultCopy, VectorScan, BobDefaultHash
 };
 
 /* GetVectorProperty - Vector get property handler */
-static int
-GetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue)
-{
+static int GetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue) {
     if (BobIntegerP(tag)) {
         BobIntegerType i;
         if ((i = BobIntegerValue(tag)) < 0 || i >= BobVectorSizeI(obj)) {
@@ -231,17 +179,14 @@ GetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValu
 }
 
 /* SetVectorProperty - Vector set property handler */
-static int
-SetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value)
-{
+static int SetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value) {
     if (BobIntegerP(tag)) {
         BobIntegerType i;
         if ((i = BobIntegerValue(tag)) < 0) {
             BobCallErrorHandler(c, BobErrIndexOutOfBounds, tag);
-        }
-        else if (i >= BobVectorSizeI(obj)) {
+        } else if (i >= BobVectorSizeI(obj)) {
             BobCPush(c, value);
-            obj   = ResizeVector(c, obj, i + 1);
+            obj = ResizeVector(c, obj, i + 1);
             if (BobMovedVectorP(obj)) {
                 obj = BobVectorForwardingAddr(obj);
             }
@@ -254,23 +199,17 @@ SetVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value)
 }
 
 /* VectorNewInstance - create a new vector */
-static BobValue
-VectorNewInstance(BobInterpreter *c, BobValue parent)
-{
+static BobValue VectorNewInstance(BobInterpreter *c, BobValue parent) {
     return BobMakeVector(c, 0);
 }
 
 /* VectorSize - Vector size handler */
-static long
-VectorSize(BobValue obj)
-{
+static long VectorSize(BobValue obj) {
     return sizeof(BobVector) + BobVectorMaxSize(obj) * sizeof(BobValue);
 }
 
 /* VectorScan - Vector scan handler */
-static void
-VectorScan(BobInterpreter *c, BobValue obj)
-{
+static void VectorScan(BobInterpreter *c, BobValue obj) {
     long i;
     for (i = 0; i < BobVectorSizeI(obj); ++i)
         BobSetVectorElementI(obj, i, BobCopyValue(c, BobVectorElementI(obj, i)));
@@ -279,53 +218,37 @@ VectorScan(BobInterpreter *c, BobValue obj)
 /* MOVED VECTOR */
 
 /* MovedVector handlers */
-static int
-GetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
+static int GetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
 
-static int
-SetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
+static int SetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
 
-static BobValue
-MovedVectorCopy(BobInterpreter *c, BobValue obj);
+static BobValue MovedVectorCopy(BobInterpreter *c, BobValue obj);
 
 /* MovedVector dispatch */
 BobDispatch BobMovedVectorDispatch = {
-        "MovedVector",
-        &BobVectorDispatch,
-        GetMovedVectorProperty,
-        SetMovedVectorProperty,
-        BobDefaultNewInstance,
-        BobDefaultPrint,
-        VectorSize,
-        MovedVectorCopy,
-        BobDefaultScan,
-        BobDefaultHash
+        "MovedVector", &BobVectorDispatch, GetMovedVectorProperty, SetMovedVectorProperty, BobDefaultNewInstance,
+        BobDefaultPrint, VectorSize, MovedVectorCopy, BobDefaultScan, BobDefaultHash
 };
 
 /* GetMovedVectorProperty - MovedVector get property handler */
-static int
-GetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue)
-{
+static int GetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue) {
     return GetVectorProperty(c, BobVectorForwardingAddr(obj), tag, pValue);
 }
 
 /* SetMovedVectorProperty - MovedVector set property handler */
-static int
-SetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value)
-{
+static int SetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value) {
     BobValue resizedVector = BobVectorForwardingAddr(obj);
     if (BobIntegerP(tag)) {
         BobIntegerType i;
         if ((i = BobIntegerValue(tag)) < 0) {
             BobCallErrorHandler(c, BobErrIndexOutOfBounds, tag);
-        }
-        else if (i >= BobVectorSizeI(resizedVector)) {
+        } else if (i >= BobVectorSizeI(resizedVector)) {
             BobCPush(c, value);
             resizedVector = ResizeVector(c, obj, i + 1);
             if (BobMovedVectorP(resizedVector)) {
                 resizedVector = BobVectorForwardingAddr(resizedVector);
             }
-            value         = BobPop(c);
+            value = BobPop(c);
         }
         BobSetVectorElementI(resizedVector, i, value);
         return TRUE;
@@ -333,10 +256,8 @@ SetMovedVectorProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue v
     return BobSetVirtualProperty(c, obj, c->vectorObject, tag, value);
 }
 
-/* MovedVectorCopy - MovedVector scan handler */
-static BobValue
-MovedVectorCopy(BobInterpreter *c, BobValue obj)
-{
+/* MovedVectorCopy - MovedVector copy handler */
+static BobValue MovedVectorCopy(BobInterpreter *c, BobValue obj) {
     BobValue newObj = BobCopyValue(c, BobVectorForwardingAddr(obj));
     BobSetDispatch(obj, &BobBrokenHeartDispatch);
     BobBrokenHeartSetForwardingAddr(obj, newObj);
@@ -344,12 +265,10 @@ MovedVectorCopy(BobInterpreter *c, BobValue obj)
 }
 
 /* BobMakeFixedVectorValue - make a new vector value */
-BobValue
-BobMakeFixedVectorValue(BobInterpreter *c, BobDispatch *type, int size)
-{
-    long     allocSize = sizeof(BobFixedVector) + size * sizeof(BobValue);
-    BobValue new       = BobAllocate(c, allocSize);
-    BobValue *p        = BobFixedVectorAddress(new);
+BobValue BobMakeFixedVectorValue(BobInterpreter *c, BobDispatch *type, int size) {
+    long allocSize = sizeof(BobFixedVector) + size * sizeof(BobValue);
+    BobValue new = BobAllocate(c, allocSize);
+    BobValue *p = BobFixedVectorAddress(new);
     BobSetDispatch(new, type);
     while (--size >= 0) {
         *p++ = c->nilValue;
@@ -360,28 +279,22 @@ BobMakeFixedVectorValue(BobInterpreter *c, BobDispatch *type, int size)
 /* BASIC VECTOR */
 
 /* BobBasicVectorSizeHandler - BasicVector size handler */
-long
-BobBasicVectorSizeHandler(BobValue obj)
-{
+long BobBasicVectorSizeHandler(BobValue obj) {
     return sizeof(BobBasicVector) + BobBasicVectorSize(obj) * sizeof(BobValue);
 }
 
 /* BobBasicVectorScanHandler - BasicVector scan handler */
-void
-BobBasicVectorScanHandler(BobInterpreter *c, BobValue obj)
-{
+void BobBasicVectorScanHandler(BobInterpreter *c, BobValue obj) {
     long i;
     for (i = 0; i < BobBasicVectorSize(obj); ++i)
         BobSetBasicVectorElement(obj, i, BobCopyValue(c, BobBasicVectorElement(obj, i)));
 }
 
 /* BobMakeBasicVector - make a new vector value */
-BobValue
-BobMakeBasicVector(BobInterpreter *c, BobDispatch *type, BobIntegerType size)
-{
-    long     allocSize = sizeof(BobBasicVector) + size * sizeof(BobValue);
-    BobValue new       = BobAllocate(c, allocSize);
-    BobValue *p        = BobBasicVectorAddress(new);
+BobValue BobMakeBasicVector(BobInterpreter *c, BobDispatch *type, BobIntegerType size) {
+    long allocSize = sizeof(BobBasicVector) + size * sizeof(BobValue);
+    BobValue new = BobAllocate(c, allocSize);
+    BobValue *p = BobBasicVectorAddress(new);
     BobSetDispatch(new, type);
     BobSetBasicVectorSize(new, size);
     while (--size >= 0) {
@@ -391,11 +304,9 @@ BobMakeBasicVector(BobInterpreter *c, BobDispatch *type, BobIntegerType size)
 }
 
 /* BobMakeVector - make a new vector value */
-BobValue
-BobMakeVector(BobInterpreter *c, BobIntegerType size)
-{
-    long     allocSize = sizeof(BobVector) + size * sizeof(BobValue);
-    BobValue *p, new   = BobAllocate(c, allocSize);
+BobValue BobMakeVector(BobInterpreter *c, BobIntegerType size) {
+    long allocSize = sizeof(BobVector) + size * sizeof(BobValue);
+    BobValue *p, new = BobAllocate(c, allocSize);
     BobSetDispatch(new, &BobVectorDispatch);
     BobSetVectorSize(new, size);
     BobSetVectorMaxSize(new, size);
@@ -407,12 +318,10 @@ BobMakeVector(BobInterpreter *c, BobIntegerType size)
 }
 
 /* BobCloneVector - clone an existing vector */
-BobValue
-BobCloneVector(BobInterpreter *c, BobValue obj)
-{
-    BobIntegerType size            = BobVectorSize(obj);
-    long           allocSize       = sizeof(BobVector) + size * sizeof(BobValue);
-    BobValue       *src, *dst, new = BobAllocate(c, allocSize);
+BobValue BobCloneVector(BobInterpreter *c, BobValue obj) {
+    BobIntegerType size = BobVectorSize(obj);
+    long allocSize = sizeof(BobVector) + size * sizeof(BobValue);
+    BobValue *src, *dst, new = BobAllocate(c, allocSize);
     BobSetDispatch(new, &BobVectorDispatch);
     BobSetVectorSize(new, size);
     BobSetVectorMaxSize(new, size);
@@ -425,17 +334,14 @@ BobCloneVector(BobInterpreter *c, BobValue obj)
 }
 
 /* ResizeVector - resize a vector */
-static BobValue
-ResizeVector(BobInterpreter *c, BobValue obj, BobIntegerType newSize)
-{
+static BobValue ResizeVector(BobInterpreter *c, BobValue obj, BobIntegerType newSize) {
     BobIntegerType size;
-    BobValue       resizeVector;
+    BobValue resizeVector;
 
     /* handle a vector that has already been moved */
     if (BobMovedVectorP(obj)) {
         resizeVector = BobVectorForwardingAddr(obj);
-    }
-    else {
+    } else {
         resizeVector = obj;
     }
 
@@ -459,7 +365,7 @@ ResizeVector(BobInterpreter *c, BobValue obj, BobIntegerType newSize)
 
             /* expand the vector */
         else {
-            BobValue       newVector, *src, *dst;
+            BobValue newVector, *src, *dst;
             BobIntegerType allocSize;
 
             /* try expanding by a fraction of the current size */
@@ -487,7 +393,7 @@ ResizeVector(BobInterpreter *c, BobValue obj, BobIntegerType newSize)
             newVector = BobMakeVector(c, allocSize);
             BobSetVectorSize(newVector, newSize);
             resizeVector = BobPop(c);
-            obj          = BobPop(c);
+            obj = BobPop(c);
 
             /* copy the data from the old to the new vector */
             src = BobVectorAddress(resizeVector);
@@ -507,9 +413,7 @@ ResizeVector(BobInterpreter *c, BobValue obj, BobIntegerType newSize)
 }
 
 /* BobVectorSize - get the size of a vector */
-BobIntegerType
-BobVectorSize(BobValue obj)
-{
+BobIntegerType BobVectorSize(BobValue obj) {
     if (BobMovedVectorP(obj)) {
         obj = BobVectorForwardingAddr(obj);
     }
@@ -517,9 +421,7 @@ BobVectorSize(BobValue obj)
 }
 
 /* BobVectorAddress - get the address of the vector data */
-BobValue *
-BobVectorAddress(BobValue obj)
-{
+BobValue *BobVectorAddress(BobValue obj) {
     if (BobMovedVectorP(obj)) {
         obj = BobVectorForwardingAddr(obj);
     }
@@ -527,9 +429,7 @@ BobVectorAddress(BobValue obj)
 }
 
 /* BobVectorElement - get a vector element */
-BobValue
-BobVectorElement(BobValue obj, BobIntegerType i)
-{
+BobValue BobVectorElement(BobValue obj, BobIntegerType i) {
     if (BobMovedVectorP(obj)) {
         obj = BobVectorForwardingAddr(obj);
     }
@@ -537,9 +437,7 @@ BobVectorElement(BobValue obj, BobIntegerType i)
 }
 
 /* BobSetVectorElement - set a vector element */
-void
-BobSetVectorElement(BobValue obj, BobIntegerType i, BobValue val)
-{
+void BobSetVectorElement(BobValue obj, BobIntegerType i, BobValue val) {
     if (BobMovedVectorP(obj)) {
         obj = BobVectorForwardingAddr(obj);
     }

@@ -10,18 +10,14 @@
 
 /* TYPE */
 
-static BobValue
-TypeNewInstance(BobInterpreter *c, BobValue parent)
-{
+static BobValue TypeNewInstance(BobInterpreter *c, BobValue parent) {
     BobDispatch *d = (BobDispatch *) BobCObjectValue(parent);
     return (*d->newInstance)(c, parent);
 }
 
-static int
-TypePrint(BobInterpreter *c, BobValue val, BobStream *s)
-{
+static int TypePrint(BobInterpreter *c, BobValue val, BobStream *s) {
     BobDispatch *d = BobTypeDispatch(val);
-    char        *p = d->typeName;
+    char *p = d->typeName;
     BobStreamPutS("<Type-", s);
     while (*p) {
         if (BobStreamPutC(*p++, s) == BobStreamEOF) {
@@ -33,43 +29,41 @@ TypePrint(BobInterpreter *c, BobValue val, BobStream *s)
 }
 
 /* BobInitTypes - initialize derived types */
-void
-BobInitTypes(BobInterpreter *c)
-{
+void BobInitTypes(BobInterpreter *c) {
     /* make all of the derived types */
     if (!(c->typeDispatch = BobMakeDispatch(c, "Type", &BobCObjectDispatch))) {
         BobInsufficientMemory(c);
     }
 
     /* initialize the 'Type' type */
-    c->typeDispatch->dataSize    = sizeof(BobCPtrObject) - sizeof(BobCObject);
-    c->typeDispatch->object      = BobEnterType(c, "Type", c->typeDispatch);
+    c->typeDispatch->dataSize = sizeof(BobCPtrObject) - sizeof(BobCObject);
+    c->typeDispatch->object = BobEnterType(BobGlobalScope(c), "Type", c->typeDispatch);
     c->typeDispatch->newInstance = TypeNewInstance;
-    c->typeDispatch->print       = TypePrint;
+    c->typeDispatch->print = TypePrint;
 
     /* fixup the 'Type' class */
     BobSetObjectClass(c->typeDispatch->object, c->typeDispatch->object);
 }
 
 /* BobAddTypeSymbols - add symbols for the built-in types */
-void
-BobAddTypeSymbols(BobInterpreter *c)
-{
-    BobEnterType(c, "CObject", &BobCObjectDispatch);
-    BobEnterType(c, "Symbol", &BobSymbolDispatch);
-    BobEnterType(c, "CMethod", &BobCMethodDispatch);
-    BobEnterType(c, "Property", &BobPropertyDispatch);
-    BobEnterType(c, "CompiledCode", &BobCompiledCodeDispatch);
-    BobEnterType(c, "Environment", &BobEnvironmentDispatch);
-    BobEnterType(c, "StackEnvironment", &BobStackEnvironmentDispatch);
-    BobEnterType(c, "MovedEnvironment", &BobMovedEnvironmentDispatch);
+void BobAddTypeSymbols(BobInterpreter *c) {
+    BobEnterType(BobGlobalScope(c), "CObject", &BobCObjectDispatch);
+    BobEnterType(BobGlobalScope(c), "Symbol", &BobSymbolDispatch);
+    BobEnterType(BobGlobalScope(c), "CMethod", &BobCMethodDispatch);
+    BobEnterType(BobGlobalScope(c), "Property", &BobPropertyDispatch);
+    BobEnterType(BobGlobalScope(c), "CompiledCode", &BobCompiledCodeDispatch);
+    BobEnterType(BobGlobalScope(c), "Environment", &BobEnvironmentDispatch);
+    BobEnterType(BobGlobalScope(c), "StackEnvironment", &BobStackEnvironmentDispatch);
+    BobEnterType(BobGlobalScope(c), "MovedEnvironment", &BobMovedEnvironmentDispatch);
 }
 
 /* BobEnterType - enter a type */
-BobValue
-BobEnterType(BobInterpreter *c, char *name, BobDispatch *d)
-{
-    BobCPush(c, BobMakeCPtrObject(c, c->typeDispatch, d));
-    BobSetGlobalValue(BobInternCString(c, name), BobTop(c));
+BobValue BobEnterType(BobScope *scope, char *name, BobDispatch *d) {
+    BobInterpreter *c = scope->c;
+    BobCheck(c, 2);
+    BobPush(c, BobMakeCPtrObject(c, c->typeDispatch, d));
+    BobPush(c, BobInternCString(c, name));
+    BobSetGlobalValue(scope, BobTop(c), c->sp[1]);
+    BobDrop(c, 1);
     return BobPop(c);
 }

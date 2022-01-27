@@ -10,108 +10,86 @@
 #include "bob.h"
 
 /* prototypes */
-static BobValue
-BIF_Type(BobInterpreter *c);
+static BobValue BIF_Type(BobInterpreter *c);
 
-static BobValue
-BIF_Hash(BobInterpreter *c);
+static BobValue BIF_Hash(BobInterpreter *c);
 
-static BobValue
-BIF_toString(BobInterpreter *c);
+static BobValue BIF_toString(BobInterpreter *c);
 
-static BobValue
-BIF_rand(BobInterpreter *c);
+static BobValue BIF_rand(BobInterpreter *c);
 
-static BobValue
-BIF_gc(BobInterpreter *c);
+static BobValue BIF_gc(BobInterpreter *c);
 
-static BobValue
-BIF_LoadObjectFile(BobInterpreter *c);
+static BobValue BIF_LoadObjectFile(BobInterpreter *c);
 
-static BobValue
-BIF_Quit(BobInterpreter *c);
+static BobValue BIF_Quit(BobInterpreter *c);
 
 /* function table */
-static BobCMethod functionTable[] = {
-        BobMethodEntry("Type", BIF_Type),
-        BobMethodEntry("Hash", BIF_Hash),
-        BobMethodEntry("toString", BIF_toString),
-        BobMethodEntry("rand", BIF_rand),
-        BobMethodEntry("gc", BIF_gc),
-        BobMethodEntry("LoadObjectFile", BIF_LoadObjectFile),
-        BobMethodEntry("Quit", BIF_Quit),
-        BobMethodEntry(0, 0)
-};
+static BobCMethod functionTable[] = {BobMethodEntry("Type", BIF_Type), BobMethodEntry("Hash", BIF_Hash),
+                                     BobMethodEntry("toString", BIF_toString), BobMethodEntry("rand", BIF_rand),
+                                     BobMethodEntry("gc", BIF_gc), BobMethodEntry("LoadObjectFile", BIF_LoadObjectFile),
+                                     BobMethodEntry("Quit", BIF_Quit), BobMethodEntry(0, 0)};
 
 /* BobEnterLibrarySymbols - enter the built-in functions and symbols */
-void
-BobEnterLibrarySymbols(BobInterpreter *c)
-{
-    BobEnterFunctions(c, functionTable);
+void BobEnterLibrarySymbols(BobInterpreter *c) {
+    BobEnterFunctions(BobGlobalScope(c), functionTable);
 }
 
 /* BIF_Type - built-in function 'Type' */
-static BobValue
-BIF_Type(BobInterpreter *c)
-{
+static BobValue BIF_Type(BobInterpreter *c) {
     BobCheckArgCnt(c, 3);
     return BobInternCString(c, BobGetDispatch(BobGetArg(c, 3))->typeName);
 }
 
 /* BIF_Hash - built-in function 'Hash' */
-static BobValue
-BIF_Hash(BobInterpreter *c)
-{
+static BobValue BIF_Hash(BobInterpreter *c) {
     BobCheckArgCnt(c, 3);
     return BobMakeInteger(c, BobHashValue(BobGetArg(c, 3)));
 }
 
 /* BIF_toString - built-in function 'toString' */
-static BobValue
-BIF_toString(BobInterpreter *c)
-{
-    int                   width, maxWidth, rightP, ch;
+static BobValue BIF_toString(BobInterpreter *c) {
+    int width, maxWidth, rightP, ch;
     BobStringOutputStream s;
-    unsigned char         buf[1024], *start;
+    char buf[1024], *start;
 
     /* check the argument count */
     BobCheckArgRange(c, 3, 5);
 
     /* get the field width and fill character */
     switch (BobArgCnt(c)) {
-    case 3:
-        width = 0;
-        ch    = ' ';
-        break;
-    case 4:
-        BobCheckType(c, 4, BobIntegerP);
-        width = (int) BobIntegerValue(BobGetArg(c, 4));
-        ch    = ' ';
-        break;
-    case 5:
-        BobCheckType(c, 4, BobIntegerP);
-        BobCheckType(c, 5, BobIntegerP);
-        width = (int) BobIntegerValue(BobGetArg(c, 4));
-        ch    = (int) BobIntegerValue(BobGetArg(c, 5));
-        break;
-    default:
-        /* never reached */
-        width = 0;
-        ch    = 0;
-        break;
+        case 3:
+            width = 0;
+            ch = ' ';
+            break;
+        case 4:
+            BobCheckType(c, 4, BobIntegerP);
+            width = (int) BobIntegerValue(BobGetArg(c, 4));
+            ch = ' ';
+            break;
+        case 5:
+            BobCheckType(c, 4, BobIntegerP);
+            BobCheckType(c, 5, BobIntegerP);
+            width = (int) BobIntegerValue(BobGetArg(c, 4));
+            ch = (int) BobIntegerValue(BobGetArg(c, 5));
+            break;
+        default:
+            /* never reached */
+            width = 0;
+            ch = 0;
+            break;
     }
 
     /* check for right fill */
     if (width <= 0) {
-        width    = -width;
-        rightP   = TRUE;
+        width = -width;
+        rightP = TRUE;
         maxWidth = sizeof(buf);
-        start    = buf;
-    }
-    else {
-        rightP   = FALSE;
+        start = buf;
+    } else {
+        rightP = FALSE;
         maxWidth = sizeof(buf) / 2;
-        start    = buf + maxWidth;
+        start = buf + maxWidth;
     }
 
     /* make sure the width is within range */
@@ -130,8 +108,7 @@ BIF_toString(BobInterpreter *c)
             while (--fill >= 0) {
                 *s.ptr++ = ch;
             }
-        }
-        else {
+        } else {
             while (--fill >= 0) {
                 *--start = ch;
             }
@@ -144,11 +121,9 @@ BIF_toString(BobInterpreter *c)
 }
 
 /* BIF_rand - built-in function 'rand' */
-static BobValue
-BIF_rand(BobInterpreter *c)
-{
+static BobValue BIF_rand(BobInterpreter *c) {
     static long rseed = 1;
-    long        k1, i;
+    long k1, i;
 
     /* parse the arguments */
     BobCheckArgCnt(c, 3);
@@ -161,7 +136,7 @@ BIF_rand(BobInterpreter *c)
     }
 
     /* algorithm taken from Dr. Dobbs Journal, November 1985, page 91 */
-    k1         = rseed / 127773L;
+    k1 = rseed / 127773L;
     if ((rseed = 16807L * (rseed - k1 * 127773L) - k1 * 2836L) < 0L) {
         rseed += 2147483647L;
     }
@@ -171,28 +146,22 @@ BIF_rand(BobInterpreter *c)
 }
 
 /* BIF_gc - built-in function 'gc' */
-static BobValue
-BIF_gc(BobInterpreter *c)
-{
+static BobValue BIF_gc(BobInterpreter *c) {
     BobCheckArgCnt(c, 2);
     BobCollectGarbage(c);
     return c->nilValue;
 }
 
 /* BIF_LoadObjectFile - built-in function 'LoadObjectFile' */
-static BobValue
-BIF_LoadObjectFile(BobInterpreter *c)
-{
+static BobValue BIF_LoadObjectFile(BobInterpreter *c) {
     BobStream *s = NULL;
-    char      *name;
+    char *name;
     BobParseArguments(c, "**S|P?=", &name, &s, BobFileDispatch);
-    return BobLoadObjectFile(c, name, s) ? c->trueValue : c->falseValue;
+    return BobLoadObjectFile(BobCurrentScope(c), name, s) ? c->trueValue : c->falseValue;
 }
 
 /* BIF_Quit - built-in function 'Quit' */
-static BobValue
-BIF_Quit(BobInterpreter *c)
-{
+static BobValue BIF_Quit(BobInterpreter *c) {
     BobCheckArgCnt(c, 2);
     BobCallErrorHandler(c, BobErrExit, 0);
     return 0; /* never reached */

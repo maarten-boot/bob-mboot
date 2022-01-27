@@ -7,40 +7,42 @@
 #include "bob.h"
 
 /* BobEnterVariable - add a built-in variable to the symbol table */
-void
-BobEnterVariable(BobInterpreter *c, char *name, BobValue value)
-{
-    BobCPush(c, value);
-    BobSetGlobalValue(BobInternCString(c, name), BobTop(c));
-    BobDrop(c, 1);
+void BobEnterVariable(BobScope *scope, char *name, BobValue value) {
+    BobInterpreter *c = scope->c;
+    BobCheck(c, 2);
+    BobPush(c, value);
+    BobPush(c, BobInternCString(c, name));
+    BobSetGlobalValue(scope, BobTop(c), c->sp[1]);
+    BobDrop(c, 2);
 }
 
 /* BobEnterFunction - add a built-in function to the symbol table */
-void
-BobEnterFunction(BobInterpreter *c, BobCMethod *function)
-{
-    BobSetGlobalValue(BobInternCString(c, function->name), (BobValue) function);
+void BobEnterFunction(BobScope *scope, BobCMethod *function) {
+    BobInterpreter *c = scope->c;
+    BobCPush(c, BobInternCString(c, function->name));
+    BobSetGlobalValue(scope, BobTop(c), (BobValue) function);
+    BobDrop(c, 1);
 }
 
 /* BobEnterFunctions - add built-in functions to the symbol table */
-void
-BobEnterFunctions(BobInterpreter *c, BobCMethod *functions)
-{
+void BobEnterFunctions(BobScope *scope, BobCMethod *functions) {
     for (; functions->name != 0; ++functions) {
-        BobEnterFunction(c, functions);
+        BobEnterFunction(scope, functions);
     }
 }
 
 /* BobEnterObject - add a built-in object to the symbol table */
-BobValue
-BobEnterObject(BobInterpreter *c, char *name, BobValue parent, BobCMethod *methods)
-{
+BobValue BobEnterObject(BobScope *scope, char *name, BobValue parent, BobCMethod *methods) {
+    BobInterpreter *c = scope->c;
+
     /* make the object and set the symbol value */
     if (name) {
-        BobCPush(c, BobMakeObject(c, parent));
-        BobSetGlobalValue(BobInternCString(c, name), BobTop(c));
-    }
-    else
+        BobCheck(c, 2);
+        BobPush(c, BobMakeObject(c, parent));
+        BobPush(c, BobInternCString(c, name));
+        BobSetGlobalValue(scope, BobTop(c), c->sp[1]);
+        BobDrop(c, 1);
+    } else
         BobCPush(c, BobMakeObject(c, parent));
 
     /* enter the methods */
@@ -54,10 +56,9 @@ BobEnterObject(BobInterpreter *c, char *name, BobValue parent, BobCMethod *metho
 
 /* BobEnterCObjectType - add a built-in cobject type to the symbol table */
 BobDispatch *
-BobEnterCObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties, long size
-)
-{
+BobEnterCObjectType(BobScope *scope, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties,
+                    long size) {
+    BobInterpreter *c = scope->c;
     BobDispatch *d;
 
     /* make the type */
@@ -66,18 +67,18 @@ BobEnterCObjectType(
     }
 
     /* add the type symbol */
-    BobSetGlobalValue(BobInternCString(c, typeName), d->object);
+    BobCPush(c, BobInternCString(c, typeName));
+    BobSetGlobalValue(scope, BobTop(c), d->object);
+    BobDrop(c, 1);
 
     /* return the new object type */
     return d;
 }
 
 /* BobEnterCPtrObjectType - add a built-in pointer cobject type to the symbol table */
-BobDispatch *
-BobEnterCPtrObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties
-)
-{
+BobDispatch *BobEnterCPtrObjectType(BobScope *scope, BobDispatch *parent, char *typeName, BobCMethod *methods,
+                                    BobVPMethod *properties) {
+    BobInterpreter *c = scope->c;
     BobDispatch *d;
 
     /* make the type */
@@ -86,16 +87,16 @@ BobEnterCPtrObjectType(
     }
 
     /* add the type symbol */
-    BobSetGlobalValue(BobInternCString(c, typeName), d->object);
+    BobCPush(c, BobInternCString(c, typeName));
+    BobSetGlobalValue(scope, BobTop(c), d->object);
+    BobDrop(c, 1);
 
     /* return the new object type */
     return d;
 }
 
 /* BobEnterMethods - add built-in methods to an object */
-void
-BobEnterMethods(BobInterpreter *c, BobValue object, BobCMethod *methods)
-{
+void BobEnterMethods(BobInterpreter *c, BobValue object, BobCMethod *methods) {
     BobCheck(c, 2);
     BobPush(c, object);
     for (; methods->name != 0; ++methods) {
@@ -107,9 +108,7 @@ BobEnterMethods(BobInterpreter *c, BobValue object, BobCMethod *methods)
 }
 
 /* BobEnterMethod - add a built-in method to an object */
-void
-BobEnterMethod(BobInterpreter *c, BobValue object, BobCMethod *method)
-{
+void BobEnterMethod(BobInterpreter *c, BobValue object, BobCMethod *method) {
     BobCheck(c, 2);
     BobPush(c, object);
     BobPush(c, BobInternCString(c, method->name));
@@ -118,9 +117,7 @@ BobEnterMethod(BobInterpreter *c, BobValue object, BobCMethod *method)
 }
 
 /* BobEnterVPMethods - add built-in virtual property methods to an object */
-void
-BobEnterVPMethods(BobInterpreter *c, BobValue object, BobVPMethod *methods)
-{
+void BobEnterVPMethods(BobInterpreter *c, BobValue object, BobVPMethod *methods) {
     BobCheck(c, 2);
     BobPush(c, object);
     for (; methods->name != 0; ++methods) {
@@ -132,9 +129,7 @@ BobEnterVPMethods(BobInterpreter *c, BobValue object, BobVPMethod *methods)
 }
 
 /* BobEnterVPMethod - add a built-in method to an object */
-void
-BobEnterVPMethod(BobInterpreter *c, BobValue object, BobVPMethod *method)
-{
+void BobEnterVPMethod(BobInterpreter *c, BobValue object, BobVPMethod *method) {
     BobCheck(c, 2);
     BobPush(c, object);
     BobPush(c, BobInternCString(c, method->name));
@@ -143,9 +138,7 @@ BobEnterVPMethod(BobInterpreter *c, BobValue object, BobVPMethod *method)
 }
 
 /* BobEnterProperty - add a property to an object */
-void
-BobEnterProperty(BobInterpreter *c, BobValue object, char *selector, BobValue value)
-{
+void BobEnterProperty(BobInterpreter *c, BobValue object, char *selector, BobValue value) {
     BobCheck(c, 3);
     BobPush(c, object);
     BobPush(c, value);

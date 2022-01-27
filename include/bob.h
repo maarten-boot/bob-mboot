@@ -1,6 +1,6 @@
 /* bob.h - bob definitions */
 /*
-        Copyright (c) 2013, by David Michael Betz
+        Copyright (c) 2001, by David Michael Betz
         All rights reserved
 */
 
@@ -11,13 +11,6 @@
 #include <stdarg.h>
 #include <setjmp.h>
 
-/* TRACE Macro's */
-#ifdef WITH_TRACE
-#define F_ENTER { fprintf( stderr, "%s %d %s\n", __FILE__, __LINE__,__func__); }
-#else
-#define F_ENTER
-#endif
-
 /* boolean values */
 #ifndef TRUE
 #define TRUE    1
@@ -26,17 +19,12 @@
 
 /* determine whether the machine is little endian */
 #if defined(WIN32)
-
 #define BOB_REVERSE_FLOATS_ON_READ
 #define BOB_REVERSE_FLOATS_ON_WRITE
-
 #endif
 
 /* object file version number */
 #define BobFaslVersion      4
-
-/* symbol hash table size */
-#define BobSymbolHashTableSize      256         /* power of 2 */
 
 /* hash table thresholds */
 #define BobHashTableCreateThreshold 4           /* power of 2 */
@@ -64,84 +52,104 @@
 #define BobFaslTagInteger   6
 #define BobFaslTagFloat     7
 
-/* limits */
-#define TKNSIZE         255     /* maximum BobToken size */
-#define LSIZE           255     /* maximum line size */
-
-
 /* basic types */
 typedef struct BobHeader *BobValue;
 
-typedef long             BobIntegerType;
+typedef long BobIntegerType;
 
-typedef double           BobFloatType;
+typedef double BobFloatType;
 
 /* pointer sized integer */
 typedef long BobPointerType;
 
 /* output conversion functions */
 #ifdef BobIntegerToStringExt
-extern void BobIntegerToString(char *buf,BobIntegerType v);
+void BobIntegerToString(char *buf,BobIntegerType v);
 #else
 #define BobIntegerToString(buf, v)   sprintf(buf,"%ld",(long)(v))
 #endif
-#ifdef BobFloatToStringExt
-extern void BobFloatToString(char *buf,BobFloatType v);
-#else
-#define BobFloatToString(buf, v)     sprintf(buf,"%g",(double)(v))
-#endif
+
+void BobFloatToString(char *buf, BobFloatType v);
+
+#define BobFloatToStringI(buf, v)    sprintf(buf,"%g",(double)(v))
 
 /* forward types */
-typedef struct BobInterpreter    BobInterpreter;
+typedef struct BobScope BobScope;
 
-typedef struct BobCompiler       BobCompiler;
+typedef struct BobInterpreter BobInterpreter;
 
-typedef struct BobDispatch       BobDispatch;
+typedef struct BobCompiler BobCompiler;
 
-typedef struct BobStream         BobStream;
+typedef struct BobDispatch BobDispatch;
+
+typedef struct BobStream BobStream;
 
 typedef struct BobStreamDispatch BobStreamDispatch;
 
-typedef struct BobFrame          BobFrame;
+typedef struct BobFrame BobFrame;
 
-typedef struct BobCMethod        BobCMethod;
+typedef struct BobCMethod BobCMethod;
 
-typedef struct BobVPMethod       BobVPMethod;
+typedef struct BobVPMethod BobVPMethod;
 
 /*  boolean macros */
 #define BobToBoolean(c, v) ((v) ? (c)->trueValue : (c)->falseValue)
 #define BobTrueP(c, v)     ((v) != (c)->falseValue)
 #define BobFalseP(c, v)    ((v) == (c)->falseValue)
 
-/* rounding mask */
-#define BobValueMask  (sizeof(BobValue) - 1)
-
 /* round a size up to a multiple of the size of a long */
-#define BobRoundSize(x)   (((x) + BobValueMask) & ~BobValueMask)
+#define BobRoundSize(x)   (((x) + 3) & ~3)
 
 /* unwind target structure */
 typedef struct BobUnwindTarget BobUnwindTarget;
 
-struct BobUnwindTarget
-{
+struct BobUnwindTarget {
     BobUnwindTarget *next;
-    jmp_buf         target;
+    jmp_buf target;
 };
 
 #define BobUnwindCatch(c)       setjmp((c)->unwindTarget->target)
 #define BobUnwind(c, v)          longjmp((c)->unwindTarget->target,(v))
 #define BobPopUnwindTarget(c)   ((c)->unwindTarget = (c)->unwindTarget->next)
 
+/* saved interpreter state */
+typedef struct BobSavedState BobSavedState;
+
+struct BobSavedState {
+    BobValue globals;       /* global variables */
+    BobValue *sp;           /* stack pointer */
+    BobFrame *fp;           /* frame pointer */
+    BobValue env;           /* environment */
+    BobValue code;          /* code object */
+    long pcoff;             /* program counter offset */
+    BobSavedState *next;    /* next saved state structure */
+};
+
+/* pop a saved state off the stack */
+#define BobPopSavedState(c)     ((c)->savedState = (c)->savedState->next)
+
 /* memory space structure */
 typedef struct BobMemorySpace BobMemorySpace;
 
-struct BobMemorySpace
-{
+struct BobMemorySpace {
+    BobMemorySpace *next;
     unsigned char *base;
     unsigned char *free;
     unsigned char *top;
+    BobValue cObjects;
+};
 
-    BobValue      cObjects;
+/* symbol block size */
+#define BobSBSize   8192
+
+/* symbol block */
+typedef struct BobSymbolBlock BobSymbolBlock;
+
+struct BobSymbolBlock {
+    BobSymbolBlock *next;
+    int bytesRemaining;
+    unsigned char *nextByte;
+    char unsigned data[BobSBSize];
 };
 
 /* number of pointers in a protected pointer block */
@@ -150,11 +158,10 @@ struct BobMemorySpace
 /* protected pointer block structure */
 typedef struct BobProtectedPtrs BobProtectedPtrs;
 
-struct BobProtectedPtrs
-{
+struct BobProtectedPtrs {
     struct BobProtectedPtrs *next;
-    BobValue                *pointers[BobPPSize];
-    int                     count;
+    BobValue *pointers[BobPPSize];
+    int count;
 };
 
 /* cmethod handler */
@@ -165,86 +172,97 @@ typedef BobValue BobCMethodHandler(BobInterpreter *c);
 /* virtual property handlers */
 typedef BobValue (*BobVPGetHandler)(BobInterpreter *c, BobValue obj);
 
-typedef void     (*BobVPSetHandler)(BobInterpreter *c, BobValue obj, BobValue value);
+typedef void (*BobVPSetHandler)(BobInterpreter *c, BobValue obj, BobValue value);
 
 #define BobVPMethodEntry(name, get, set)  { &BobVPMethodDispatch,name,get,set }
 
+/* scope structure */
+struct BobScope {
+    BobInterpreter *c;
+    BobValue globals;
+    BobScope *next;
+};
+
+/* get the object holding the variables in a scope */
+#define BobScopeObject(s)   ((s)->globals)
+
 /* interpreter context structure */
-struct BobInterpreter
-{
-    BobCompiler     *compiler;      /* compiler structure */
-    char            *errorMessage;  /* last error message */
+struct BobInterpreter {
+    BobScope currentScope;          /* current scope */
+    BobScope globalScope;           /* the global scope */
+    BobScope *scopes;               /* active scopes */
+    BobCompiler *compiler;          /* compiler structure */
 
+    char *errorMessage;             /* last error message */
     BobUnwindTarget *unwindTarget;  /* unwind target */
+    BobSavedState *savedState;      /* saved state */
 
-    BobValue        *argv;          /* arguments for current function */
-    int             argc;           /* argument count for current function */
+    BobValue *argv;                 /* arguments for current function */
+    int argc;                       /* argument count for current function */
 
-    BobValue        *stack;         /* stack base */
-    BobValue        *stackTop;      /* stack top */
+    BobValue *stack;                /* stack base */
+    BobValue *stackTop;             /* stack top */
+    BobValue *sp;                   /* stack pointer */
+    BobFrame *fp;                   /* frame pointer */
+    BobValue code;                  /* code object */
+    unsigned char *cbase;           /* code base */
+    unsigned char *pc;              /* program counter */
+    BobValue val;                   /* value register */
+    BobValue env;                   /* environment register */
 
-    BobValue        *sp;            /* stack pointer */
-    BobFrame        *fp;            /* frame pointer */
+    BobValue nilValue;              /* nil value */
+    BobValue trueValue;             /* true value */
+    BobValue falseValue;            /* false value */
 
-    BobValue        code;           /* code object */
-    unsigned char   *cbase;         /* code base */
-
-    unsigned char   *pc;            /* program counter */
-
-    BobValue        val;            /* value register */
-    BobValue        env;            /* environment register */
-
-    BobValue        nilValue;       /* nil value */
-    BobValue        trueValue;      /* true value */
-    BobValue        falseValue;     /* false value */
-
-    BobValue        objectValue;    /* base of object inheritance tree */
-    BobValue        methodObject;   /* object for the Method type */
-    BobValue        vectorObject;   /* object for the Vector type */
-    BobValue        symbolObject;   /* object for the Symbol type */
-    BobValue        stringObject;   /* object for the String type */
-    BobValue        integerObject;  /* object for the Integer type */
-    BobValue        floatObject;    /* object for the Float type */
-    BobValue        symbols;        /* symbol table */
-
+    BobValue objectValue;           /* base of object inheritance tree */
+    BobValue methodObject;          /* object for the Method type */
+    BobValue vectorObject;          /* object for the Vector type */
+    BobValue symbolObject;          /* object for the Symbol type */
+    BobValue stringObject;          /* object for the String type */
+    BobValue integerObject;         /* object for the Integer type */
+    BobValue floatObject;           /* object for the Float type */
+    BobValue matrixObject;          /* object for the Matrix type */
+    BobValue symbols;               /* symbol table */
+    BobSymbolBlock *symbolSpace;    /* current symbol block */
     void (*errorHandler)(BobInterpreter *c, int code, va_list ap);
 
-    BobProtectedPtrs *protectedPtrs;    /* protected pointers */
-    BobMemorySpace   *oldSpace;         /* old memory space */
-    BobMemorySpace   *newSpace;         /* new memory space */
+    BobProtectedPtrs *protectedPtrs;/* protected pointers */
+    BobMemorySpace *oldSpace;       /* old memory space */
+    BobMemorySpace **pNextOld;      /* place to link the next old space */
+    BobMemorySpace *newSpace;       /* new memory space */
+    BobMemorySpace **pNextNew;      /* place to link the next new space */
+    long expandSize;                /* size of each expansion */
+    unsigned long totalMemory;      /* total memory allocated */
+    unsigned long allocCount;       /* number of calls to BobAlloc */
+    BobStream *standardInput;       /* standard input stream */
+    BobStream *standardOutput;      /* standard output stream */
+    BobStream *standardError;       /* standard error stream */
 
-    unsigned long    gcCount;           /* number of garbage collections */
-    unsigned long    totalMemory;       /* total memory allocated */
-    unsigned long    allocCount;        /* number of calls to BobAlloc */
+    void *(*fileOpen)(BobInterpreter *c, char *name, char *mode);
 
-    BobStream        *standardInput;    /* standard input stream */
-    BobStream        *standardOutput;   /* standard output stream */
-    BobStream        *standardError;    /* standard error stream */
+    int (*fileClose)(void *fp);
 
-    void *(*fileOpen) (BobInterpreter *c, char *name, char *mode);
-    int (*fileClose)  (void *fp);
-    int (*fileGetC)   (void *fp);
-    int (*filePutC)   (int ch, void *fp);
+    int (*fileGetC)(void *fp);
 
-    BobDispatch *typeDispatch;          /* the Type type */
-    BobDispatch *types;                 /* derived types */
+    int (*filePutC)(int ch, void *fp);
 
+    BobDispatch *typeDispatch;      /* the Type type */
+    BobDispatch *types;             /* derived types */
     void (*protectHandler)(BobInterpreter *c, void *data);
 
     void *protectData;
-
-    int verbose;                        /* be verbose info during execution if > 0 */
-    int debug;                          /* show debug info during execution if > 0 */
 };
+
+/* macro to get the global scope */
+#define BobGlobalScope(c)           (&(c)->globalScope)
+#define BobCurrentScope(c)          (&(c)->currentScope)
 
 /* argument list macros */
 #define BobCheckArgCnt(c, m)         BobCheckArgRange(c,m,m)
-
 #define BobCheckArgMin(c, m)         do { \
                                         if ((c)->argc < (m)) \
                                             BobTooFewArguments(c); \
                                     } while (0)
-
 #define BobCheckArgRange(c, mn, mx)   do { \
                                         int n = (c)->argc; \
                                         if (n < (mn)) \
@@ -252,12 +270,10 @@ struct BobInterpreter
                                         else if (n > (mx)) \
                                             BobTooManyArguments(c); \
                                     } while (0)
-
 #define BobCheckType(c, n, tp)        do { \
                                         if (!tp(BobGetArg(c,n))) \
-                                            BobTypeError(c,BobGetArg(c,n));                                                 \
+                                            BobTypeError(c,BobGetArg(c,n)); \
                                     } while (0)
-
 #define BobArgCnt(c)                ((c)->argc)
 #define BobArgPtr(c)                ((c)->argv)
 #define BobGetArg(c, n)              ((c)->argv[-(n)])
@@ -275,10 +291,8 @@ struct BobInterpreter
 typedef void (BobDestructor)(BobInterpreter *c, void *data, void *ptr);
 
 /* type dispatch structure */
-struct BobDispatch
-{
-    char        *typeName;
-
+struct BobDispatch {
+    char *typeName;
     BobDispatch *baseType;
 
     int (*getProperty)(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
@@ -296,9 +310,9 @@ struct BobDispatch
     void (*scan)(BobInterpreter *c, BobValue obj);
 
     BobIntegerType (*hash)(BobValue obj);
-    BobValue object;
 
-    long     dataSize;
+    BobValue object;
+    long dataSize;
 
     void (*destroy)(BobInterpreter *c, BobValue obj);
 
@@ -318,8 +332,7 @@ struct BobDispatch
 
 /* VALUE */
 
-struct BobHeader
-{
+struct BobHeader {
     BobDispatch *dispatch;
 };
 
@@ -331,16 +344,14 @@ struct BobHeader
 #define BobCopyValue(c, o)               (BobGetDispatch(o)->copy(c,o))
 #define BobHashValue(o)                 (BobGetDispatch(o)->hash(o))
 
-int
-BobGetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
+int BobGetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
 
 /* BROKEN HEART */
 
-typedef struct
-{
+typedef struct {
     BobDispatch *dispatch;
-    BobValue    forwardingAddr;
-}            BobBrokenHeart;
+    BobValue forwardingAddr;
+} BobBrokenHeart;
 
 #define BobBrokenHeartP(o)                      BobIsType(o,&BobBrokenHeartDispatch)
 #define BobBrokenHeartForwardingAddr(o)         (((BobBrokenHeart *)o)->forwardingAddr)
@@ -355,7 +366,7 @@ extern BobDispatch BobBrokenHeartDispatch;
 
 #define BobSmallIntegerValueP(v)        ((v) >= BobSmallIntegerMin && (v) <= BobSmallIntegerMax)
 #define BobSmallIntegerValue(o)         ((BobIntegerType)o >> 1)
-#define BobMakeSmallInteger(n)          ((BobValue)(((BobIntegerType)(n) << 1) | 1))
+#define BobMakeSmallInteger(n)          ((BobValue)(((n) << 1) | 1))
 
 /* NUMBER */
 
@@ -363,47 +374,66 @@ extern BobDispatch BobBrokenHeartDispatch;
 
 /* INTEGER */
 
-typedef struct
-{
-    BobDispatch    *dispatch;
+typedef struct {
+    BobDispatch *dispatch;
     BobIntegerType value;
-}                  BobInteger;
+} BobInteger;
 
 #define BobIntegerP(o)                  (!BobPointerP(o) || BobIsType(o,&BobIntegerDispatch))
 #define BobIntegerValue(o)              (BobPointerP(o) ? BobHeapIntegerValue(o) : BobSmallIntegerValue(o))
 #define BobHeapIntegerValue(o)          (((BobInteger *)o)->value)
 #define BobSetHeapIntegerValue(o, v)     (((BobInteger *)o)->value = (v))
 
-BobValue
-BobMakeInteger(BobInterpreter *c, BobIntegerType value);
+BobValue BobMakeInteger(BobInterpreter *c, BobIntegerType value);
 
 extern BobDispatch BobIntegerDispatch;
 
 /* FLOAT */
 
-typedef struct
-{
-    BobDispatch  *dispatch;
+typedef struct {
+    BobDispatch *dispatch;
     BobFloatType value;
-}                  BobFloat;
+} BobFloat;
 
 #define BobFloatP(o)                    BobIsType(o,&BobFloatDispatch)
 #define BobFloatValue(o)                (((BobFloat *)o)->value)
 #define BobSetFloatValue(o, v)           (((BobFloat *)o)->value = (v))
 
-BobValue
-BobMakeFloat(BobInterpreter *c, BobFloatType value);
+BobValue BobMakeFloat(BobInterpreter *c, BobFloatType value);
 
 extern BobDispatch BobFloatDispatch;
 
+/* MATRIX */
+
+typedef struct {
+    BobDispatch *dispatch;
+    BobIntegerType nRows;
+    BobIntegerType nCols;
+    BobFloatType *rows[1];
+} BobMatrix;
+
+#define BobMatrixP(o)                   BobIsBaseType(o,&BobMatrixDispatch)
+#define BobMatrixRows(o)                (((BobMatrix *)o)->nRows)
+#define BobMatrixCols(o)                (((BobMatrix *)o)->nCols)
+#define BobMatrixElement(o, i, j)         (((BobMatrix *)o)->rows[i][j])
+#define BobSetMatrixElement(o, i, j, v)    (((BobMatrix *)o)->rows[i][j] = (v))
+#define BobMatrixAddress(o)             (((BobMatrix *)o)->rows[0])
+
+BobValue BobMakeMatrix(BobInterpreter *c, BobIntegerType nRows, BobIntegerType nCols);
+
+BobValue BobMatrixUnaryOp(BobInterpreter *c, int op, BobValue p1);
+
+BobValue BobMatrixBinaryOp(BobInterpreter *c, int op, BobValue p1, BobValue p2);
+
+extern BobDispatch BobMatrixDispatch;
+
 /* STRING */
 
-typedef struct
-{
-    BobDispatch    *dispatch;
+typedef struct {
+    BobDispatch *dispatch;
     BobIntegerType size;
 /*  unsigned char data[0]; */
-}                  BobString;
+} BobString;
 
 #define BobStringP(o)                   BobIsType(o,&BobStringDispatch)
 #define BobStringSize(o)                (((BobString *)o)->size)
@@ -412,72 +442,60 @@ typedef struct
 #define BobStringElement(o, i)           (BobStringAddress(o)[i])
 #define BobSetStringElement(o, i, v)      (BobStringAddress(o)[i] = (v))
 
-BobValue
-BobMakeString(BobInterpreter *c, unsigned char *data, BobIntegerType size);
+BobValue BobMakeString(BobInterpreter *c, unsigned char *data, BobIntegerType size);
 
-BobValue
-BobMakeCString(BobInterpreter *c, char *str);
+BobValue BobMakeCString(BobInterpreter *c, char *str);
 
 extern BobDispatch BobStringDispatch;
 
 /* SYMBOL */
 
-typedef struct
-{
-    BobDispatch    *dispatch;
+typedef struct {
+    BobDispatch *dispatch;
     BobIntegerType hashValue;
-    BobValue       value;
-    BobValue       next;
-    int            printNameLength;
-    unsigned char  printName[1];
-}                  BobSymbol;
+    int printNameLength;
+    unsigned char printName[1];
+} BobSymbol;
 
 #define BobSymbolP(o)                   BobIsType(o,&BobSymbolDispatch)
 #define BobSymbolPrintName(o)           (((BobSymbol *)o)->printName)
 #define BobSymbolPrintNameLength(o)     (((BobSymbol *)o)->printNameLength)
 #define BobSymbolHashValue(o)           (((BobSymbol *)o)->hashValue)
-#define BobGlobalValue(o)               (((BobSymbol *)o)->value)
-#define BobSetGlobalValue(o, v)         (((BobSymbol *)o)->value = (v))
-#define BobSymbolNext(o)                (((BobSymbol *)o)->next)
-#define BobSetSymbolNext(o, v)          (((BobSymbol *)o)->next = (v))
 
-BobValue
-BobMakeSymbol(BobInterpreter *c, unsigned char *printName, int length);
+BobValue BobMakeSymbol(BobInterpreter *c, unsigned char *printName, int length);
 
-BobValue
-BobIntern(BobInterpreter *c, BobValue printName);
+BobValue BobIntern(BobInterpreter *c, BobValue printName);
 
-BobValue
-BobInternCString(BobInterpreter *c, char *printName);
+BobValue BobInternCString(BobInterpreter *c, char *printName);
 
-BobValue
-BobInternString(BobInterpreter *c, unsigned char *printName, int length);
+BobValue BobInternString(BobInterpreter *c, unsigned char *printName, int length);
+
+int BobGlobalValue(BobScope *scope, BobValue sym, BobValue *pValue);
+
+void BobSetGlobalValue(BobScope *scope, BobValue sym, BobValue value);
 
 extern BobDispatch BobSymbolDispatch;
 
 /* OBJECT */
 
-typedef struct
-{
-    BobDispatch    *dispatch;
-    BobValue       parent;
-    BobValue       properties;
+typedef struct {
+    BobDispatch *dispatch;
+    BobValue parent;
+    BobValue properties;
     BobIntegerType propertyCount;
-}                  BobObject;
+} BobObject;
 
 #define BobObjectP(o)                   BobIsBaseType(o,&BobObjectDispatch)
 #define BobObjectClass(o)               (((BobObject *)o)->parent)
-#define BobSetObjectClass(o, v)         (((BobObject *)o)->parent = (v))
+#define BobSetObjectClass(o, v)          (((BobObject *)o)->parent = (v))
 #define BobObjectProperties(o)          (((BobObject *)o)->properties)
-#define BobSetObjectProperties(o, v)    (((BobObject *)o)->properties = (v))
+#define BobSetObjectProperties(o, v)     (((BobObject *)o)->properties = (v))
 #define BobObjectPropertyCount(o)       (((BobObject *)o)->propertyCount)
-#define BobSetObjectPropertyCount(o, v) (((BobObject *)o)->propertyCount = (v))
+#define BobSetObjectPropertyCount(o, v)  (((BobObject *)o)->propertyCount = (v))
 
-BobValue
-BobMakeObject(BobInterpreter *c, BobValue parent);
+BobValue BobMakeObject(BobInterpreter *c, BobValue parent);
 
-BobValue
-BobCloneObject(BobInterpreter *c, BobValue obj);
+BobValue BobCloneObject(BobInterpreter *c, BobValue obj);
 
 BobValue
 BobFindProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobIntegerType *pHashValue, BobIntegerType *pIndex);
@@ -486,20 +504,18 @@ extern BobDispatch BobObjectDispatch;
 
 /* COBJECT */
 
-typedef struct
-{
-    BobDispatch    *dispatch;
-    BobValue       parent;
-    BobValue       properties;
+typedef struct {
+    BobDispatch *dispatch;
+    BobValue parent;
+    BobValue properties;
     BobIntegerType propertyCount;
-    BobValue       next;
-}                  BobCObject;
+    BobValue next;
+} BobCObject;
 
-typedef struct
-{
+typedef struct {
     BobCObject hdr;
-    void       *ptr;
-}                  BobCPtrObject;
+    void *ptr;
+} BobCPtrObject;
 
 #define BobCObjectSize(o)            (((BobCObject *)o)->size)
 #define BobSetCObjectSize(o, v)       (((BobCObject *)o)->size = (v))
@@ -507,79 +523,62 @@ typedef struct
 #define BobCObjectValue(o)           (((BobCPtrObject *)o)->ptr)
 #define BobSetCObjectValue(o, v)      (((BobCPtrObject *)o)->ptr = (v))
 
-int
-BobCObjectP(BobValue val);
+int BobCObjectP(BobValue val);
 
 BobDispatch *
-BobMakeCObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties, long size
-);
+BobMakeCObjectType(BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties,
+                   long size);
 
-BobValue
-BobMakeCObject(BobInterpreter *c, BobDispatch *d);
+BobValue BobMakeCObject(BobInterpreter *c, BobDispatch *d);
 
-BobDispatch *
-BobMakeCPtrObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties
-);
+BobDispatch *BobMakeCPtrObjectType(BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods,
+                                   BobVPMethod *properties);
 
-BobValue
-BobMakeCPtrObject(BobInterpreter *c, BobDispatch *d, void *ptr);
+BobValue BobMakeCPtrObject(BobInterpreter *c, BobDispatch *d, void *ptr);
 
-void
-BobEnterCObjectMethods(BobInterpreter *c, BobDispatch *d, BobCMethod *methods, BobVPMethod *properties);
+void BobEnterCObjectMethods(BobInterpreter *c, BobDispatch *d, BobCMethod *methods, BobVPMethod *properties);
 
-int
-BobGetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue *pValue);
+int BobGetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue *pValue);
 
-int
-BobSetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue value);
+int BobSetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue value);
 
 extern BobDispatch BobCObjectDispatch;
 
 /* VECTOR */
 
-typedef struct
-{
-    BobDispatch    *dispatch;
+typedef struct {
+    BobDispatch *dispatch;
     BobIntegerType maxSize;
-    union
-    {
+    union {
         BobIntegerType size;
-        BobValue       forwardingAddr;
-    }              d;
-    /*  BobValue data[0]; */
-}                  BobVector;
+        BobValue forwardingAddr;
+    } d;
+/*  BobValue data[0]; */
+} BobVector;
 
-#define BobVectorP(o)                       BobIsBaseType(o,&BobVectorDispatch)
-#define BobMovedVectorP(o)                  BobIsType(o,&BobMovedVectorDispatch)
-#define BobVectorSizeI(o)                   (((BobVector *)o)->d.size)
-#define BobSetVectorSize(o, s)              (((BobVector *)o)->d.size = (s))
-#define BobVectorForwardingAddr(o)          (((BobVector *)o)->d.forwardingAddr)
-#define BobSetVectorForwardingAddr(o, a)    (((BobVector *)o)->d.forwardingAddr = (a))
-#define BobVectorMaxSize(o)                 (((BobVector *)o)->maxSize)
-#define BobSetVectorMaxSize(o, s)           (((BobVector *)o)->maxSize = (s))
-#define BobVectorAddressI(o)                ((BobValue *)((char *)o + sizeof(BobVector)))
-#define BobVectorElementI(o, i)             (BobVectorAddress(o)[i])
-#define BobSetVectorElementI(o, i, v)       (BobVectorAddress(o)[i] = (v))
+#define BobVectorP(o)                   BobIsBaseType(o,&BobVectorDispatch)
+#define BobMovedVectorP(o)              BobIsType(o,&BobMovedVectorDispatch)
+#define BobVectorSizeI(o)               (((BobVector *)o)->d.size)
+#define BobSetVectorSize(o, s)           (((BobVector *)o)->d.size = (s))
+#define BobVectorForwardingAddr(o)      (((BobVector *)o)->d.forwardingAddr)
+#define BobSetVectorForwardingAddr(o, a) (((BobVector *)o)->d.forwardingAddr = (a))
+#define BobVectorMaxSize(o)             (((BobVector *)o)->maxSize)
+#define BobSetVectorMaxSize(o, s)        (((BobVector *)o)->maxSize = (s))
+#define BobVectorAddressI(o)            ((BobValue *)((char *)o + sizeof(BobVector)))
+#define BobVectorElementI(o, i)          (BobVectorAddress(o)[i])
+#define BobSetVectorElementI(o, i, v)     (BobVectorAddress(o)[i] = (v))
 
-BobValue
-BobMakeVector(BobInterpreter *c, BobIntegerType size);
+BobValue BobMakeVector(BobInterpreter *c, BobIntegerType size);
 
-BobValue
-BobCloneVector(BobInterpreter *c, BobValue obj);
+BobValue BobCloneVector(BobInterpreter *c, BobValue obj);
 
-BobIntegerType
-BobVectorSize(BobValue obj);
+BobIntegerType BobVectorSize(BobValue obj);
 
-BobValue *
-BobVectorAddress(BobValue obj);
+BobValue *BobVectorAddress(BobValue obj);
 
-BobValue
-BobVectorElement(BobValue obj, BobIntegerType i);
+BobValue BobVectorElement(BobValue obj, BobIntegerType i);
 
-void
-BobSetVectorElement(BobValue obj, BobIntegerType i, BobValue val);
+void BobSetVectorElement(BobValue obj, BobIntegerType i, BobValue val);
 
 extern BobDispatch BobVectorDispatch;
 
@@ -587,43 +586,38 @@ extern BobDispatch BobMovedVectorDispatch;
 
 /* BASIC VECTOR */
 
-typedef struct
-{
-    BobDispatch    *dispatch;
+typedef struct {
+    BobDispatch *dispatch;
     BobIntegerType size;
-    /*  BobValue data[0]; */
-}                  BobBasicVector;
+/*  BobValue data[0]; */
+} BobBasicVector;
 
-#define BobBasicVectorSize(o)               (((BobBasicVector *)o)->size)
-#define BobSetBasicVectorSize(o, s)         (((BobBasicVector *)o)->size = (s))
-#define BobBasicVectorAddress(o)            ((BobValue *)((char *)o + sizeof(BobBasicVector)))
-#define BobBasicVectorElement(o, i)         (BobBasicVectorAddress(o)[i])
-#define BobSetBasicVectorElement(o, i, v)   (BobBasicVectorAddress(o)[i] = (v))
+#define BobBasicVectorSize(o)           (((BobBasicVector *)o)->size)
+#define BobSetBasicVectorSize(o, s)      (((BobBasicVector *)o)->size = (s))
+#define BobBasicVectorAddress(o)        ((BobValue *)((char *)o + sizeof(BobBasicVector)))
+#define BobBasicVectorElement(o, i)      (BobBasicVectorAddress(o)[i])
+#define BobSetBasicVectorElement(o, i, v) (BobBasicVectorAddress(o)[i] = (v))
 
-BobValue
-BobMakeBasicVector(BobInterpreter *c, BobDispatch *type, BobIntegerType size);
+BobValue BobMakeBasicVector(BobInterpreter *c, BobDispatch *type, BobIntegerType size);
 
 /* FIXED VECTOR */
 
-typedef struct
-{
+typedef struct {
     BobDispatch *dispatch;
-    /*  BobValue data[0]; */
-}                  BobFixedVector;
+/*  BobValue data[0]; */
+} BobFixedVector;
 
 #define BobFixedVectorAddress(o)        ((BobValue *)((char *)o + sizeof(BobFixedVector)))
 #define BobFixedVectorElement(o, i)      (BobFixedVectorAddress(o)[i])
 #define BobSetFixedVectorElement(o, i, v) (BobFixedVectorAddress(o)[i] = (v))
 
-BobValue
-BobMakeFixedVectorValue(BobInterpreter *c, BobDispatch *type, int size);
+BobValue BobMakeFixedVectorValue(BobInterpreter *c, BobDispatch *type, int size);
 
 /* CMETHOD */
 
-struct BobCMethod
-{
-    BobDispatch       *dispatch;
-    char              *name;
+struct BobCMethod {
+    BobDispatch *dispatch;
+    char *name;
     BobCMethodHandler *handler;
 };
 
@@ -631,17 +625,15 @@ struct BobCMethod
 #define BobCMethodName(o)               (((BobCMethod *)o)->name)
 #define BobCMethodHandler(o)            (((BobCMethod *)o)->handler)
 
-BobValue
-BobMakeCMethod(BobInterpreter *c, char *name, BobCMethodHandler *handler);
+BobValue BobMakeCMethod(BobInterpreter *c, char *name, BobCMethodHandler *handler);
 
 extern BobDispatch BobCMethodDispatch;
 
 /* VIRTUAL PROPERTY METHOD */
 
-struct BobVPMethod
-{
-    BobDispatch     *dispatch;
-    char            *name;
+struct BobVPMethod {
+    BobDispatch *dispatch;
+    char *name;
     BobVPGetHandler getHandler;
     BobVPSetHandler setHandler;
 };
@@ -651,8 +643,7 @@ struct BobVPMethod
 #define BobVPMethodGetHandler(o)         (((BobVPMethod *)o)->getHandler)
 #define BobVPMethodSetHandler(o)         (((BobVPMethod *)o)->setHandler)
 
-BobValue
-BobMakeVPMethod(BobInterpreter *c, char *name, BobVPGetHandler getHandler, BobVPSetHandler setHandler);
+BobValue BobMakeVPMethod(BobInterpreter *c, char *name, BobVPGetHandler getHandler, BobVPSetHandler setHandler);
 
 extern BobDispatch BobVPMethodDispatch;
 
@@ -663,8 +654,7 @@ extern BobDispatch BobVPMethodDispatch;
 #define BobHashTableElement(o, i)        BobBasicVectorElement(o,i)
 #define BobSetHashTableElement(o, i, v)   BobSetBasicVectorElement(o,i,v)
 
-BobValue
-BobMakeHashTable(BobInterpreter *c, long size);
+BobValue BobMakeHashTable(BobInterpreter *c, long size);
 
 extern BobDispatch BobHashTableDispatch;
 
@@ -678,8 +668,7 @@ extern BobDispatch BobHashTableDispatch;
 #define BobSetPropertyNext(o, v)         BobSetFixedVectorElement(o,2,v)
 #define BobPropertySize                 3
 
-BobValue
-BobMakeProperty(BobInterpreter *c, BobValue key, BobValue value);
+BobValue BobMakeProperty(BobInterpreter *c, BobValue key, BobValue value);
 
 extern BobDispatch BobPropertyDispatch;
 
@@ -688,10 +677,10 @@ extern BobDispatch BobPropertyDispatch;
 #define BobMethodP(o)                   BobIsBaseType(o,&BobMethodDispatch)
 #define BobMethodCode(o)                BobFixedVectorElement(o,0)
 #define BobMethodEnv(o)                 BobFixedVectorElement(o,1)
-#define BobMethodSize                   2
+#define BobMethodGlobals(o)             BobFixedVectorElement(o,2);
+#define BobMethodSize                   3
 
-BobValue
-BobMakeMethod(BobInterpreter *c, BobValue code, BobValue env);
+BobValue BobMakeMethod(BobInterpreter *c, BobValue code, BobValue env, BobValue globals);
 
 extern BobDispatch BobMethodDispatch;
 
@@ -704,8 +693,7 @@ extern BobDispatch BobMethodDispatch;
 #define BobCompiledCodeName(o)          BobBasicVectorElement(o,1)
 #define BobFirstLiteral                 1
 
-BobValue
-BobMakeCompiledCode(BobInterpreter *c, long size, BobValue bytecodes);
+BobValue BobMakeCompiledCode(BobInterpreter *c, long size, BobValue bytecodes);
 
 extern BobDispatch BobCompiledCodeDispatch;
 
@@ -725,8 +713,7 @@ extern BobDispatch BobCompiledCodeDispatch;
 
 typedef BobBasicVector BobEnvironment;
 
-BobValue
-BobMakeEnvironment(BobInterpreter *c, long size);
+BobValue BobMakeEnvironment(BobInterpreter *c, long size);
 
 extern BobDispatch BobEnvironmentDispatch;
 
@@ -758,59 +745,54 @@ extern BobDispatch *BobFileDispatch;
 #define BobTypeSetDispatch(o, v)         BobSetCObjectValue(o,(void *)v)
 
 /* default handlers */
-int
-BobDefaultPrint(BobInterpreter *c, BobValue obj, BobStream *s);
+int BobDefaultPrint(BobInterpreter *c, BobValue obj, BobStream *s);
 
 /* end of file indicator for StreamGetC */
 #define BobStreamEOF    (-1)
 
 /* stream dispatch structure */
-struct BobStreamDispatch
-{
+struct BobStreamDispatch {
     int (*close)(BobStream *s);
+
     int (*getc)(BobStream *s);
+
     int (*putc)(int ch, BobStream *s);
 };
 
 /* stream structure */
-struct BobStream
-{
+struct BobStream {
     BobStreamDispatch *d;
 };
 
 /* string stream structure */
-typedef struct
-{
+typedef struct {
     BobStreamDispatch *d;
-    unsigned char     *buf;
-    unsigned char     *ptr;
-    long              len;
-}                  BobStringStream;
+    unsigned char *buf;
+    unsigned char *ptr;
+    long len;
+} BobStringStream;
 
 /* string output stream structure */
-typedef struct
-{
+typedef struct {
     BobStreamDispatch *d;
-    unsigned char     *buf;
-    unsigned char     *ptr;
-    unsigned char     *end;
-    long              len;
-}                  BobStringOutputStream;
+    unsigned char *buf;
+    unsigned char *ptr;
+    unsigned char *end;
+    long len;
+} BobStringOutputStream;
 
 /* indirect stream structure */
-typedef struct
-{
+typedef struct {
     BobStreamDispatch *d;
-    BobStream         **pStream;
-}                  BobIndirectStream;
+    BobStream **pStream;
+} BobIndirectStream;
 
 /* file stream structure */
-typedef struct
-{
+typedef struct {
     BobStreamDispatch *d;
-    BobInterpreter    *c;
-    void              *fp;
-}                  BobFileStream;
+    BobInterpreter *c;
+    void *fp;
+} BobFileStream;
 
 /* macros */
 #define BobCloseStream(s)       ((*(s)->d->close)(s))
@@ -845,6 +827,7 @@ extern BobStream BobNullStream;
 #define BobErrNotAnObjectFile       21
 #define BobErrWrongObjectVersion    22
 #define BobErrValueError            23
+#define BobErrIncompatible          24
 
 /* compiler error codes */
 #define BobErrSyntaxError       0x1000
@@ -853,332 +836,242 @@ extern BobStream BobNullStream;
 #define BobErrTooManyLiterals   0x1003
 
 /* bobcom.c prototypes */
-void
-BobInitScanner(BobCompiler *c, BobStream *s);
+void BobInitScanner(BobCompiler *c, BobStream *s);
 
-BobCompiler *
-BobMakeCompiler(BobInterpreter *ic, void *buf, size_t size, long lsize);
+BobCompiler *BobMakeCompiler(BobInterpreter *ic, long csize, long lsize);
 
-void
-BobFreeCompiler(BobCompiler *c);
+void BobFreeCompiler(BobCompiler *c);
 
-BobValue
-BobCompileExpr(BobInterpreter *c);
+BobValue BobCompileExpr(BobScope *scope);
 
 /* bobint.c prototypes */
-BobValue
-BobCallFunction(BobInterpreter *c, BobValue fun, int argc, ...);
+BobValue BobCallFunction(BobScope *scope, BobValue fun, int argc, ...);
 
-BobValue
-BobCallFunctionByName(BobInterpreter *c, char *fname, int argc, ...);
+BobValue BobCallFunctionByName(BobScope *scope, char *fname, int argc, ...);
 
-BobValue
-BobSendMessage(BobInterpreter *c, BobValue obj, BobValue selector, int argc, ...);
+BobValue BobSendMessage(BobInterpreter *c, BobValue obj, BobValue selector, int argc, ...);
 
-BobValue
-BobSendMessageByName(BobInterpreter *c, BobValue obj, char *sname, int argc, ...);
+BobValue BobSendMessageByName(BobInterpreter *c, BobValue obj, char *sname, int argc, ...);
 
-BobValue
-BobInternalCall(BobInterpreter *c, int argc);
+BobValue BobInternalCall(BobInterpreter *c, int argc);
 
-BobValue
-BobInternalSend(BobInterpreter *c, int argc);
+BobValue BobInternalSend(BobInterpreter *c, int argc);
 
-void
-BobPushUnwindTarget(BobInterpreter *c, BobUnwindTarget *target);
+void BobPushUnwindTarget(BobInterpreter *c, BobUnwindTarget *target);
 
-void
-BobPopAndUnwind(BobInterpreter *c, int value);
+void BobPopAndUnwind(BobInterpreter *c, int value);
 
-void
-BobTooManyArguments(BobInterpreter *c);
+void BobTooManyArguments(BobInterpreter *c);
 
-void
-BobTooFewArguments(BobInterpreter *c);
+void BobTooFewArguments(BobInterpreter *c);
 
-void
-BobTypeError(BobInterpreter *c, BobValue v);
+void BobTypeError(BobInterpreter *c, BobValue v);
 
-void
-BobStackOverflow(BobInterpreter *c);
+void BobStackOverflow(BobInterpreter *c);
 
-void
-BobAbort(BobInterpreter *c);
+void BobAbort(BobInterpreter *c);
 
-int
-BobEql(BobValue obj1, BobValue obj2);
+int BobEql(BobValue obj1, BobValue obj2);
 
-void
-BobCopyStack(BobInterpreter *c);
+void BobCopyStack(BobInterpreter *c);
 
-void
-BobStackTrace(BobInterpreter *c);
+void BobStackTrace(BobInterpreter *c);
 
 /* bobenter.c prototypes */
-void
-BobEnterVariable(BobInterpreter *c, char *name, BobValue value);
+void BobEnterVariable(BobScope *scope, char *name, BobValue value);
 
-void
-BobEnterFunction(BobInterpreter *c, BobCMethod *function);
+void BobEnterFunction(BobScope *scope, BobCMethod *function);
 
-void
-BobEnterFunctions(BobInterpreter *c, BobCMethod *functions);
+void BobEnterFunctions(BobScope *scope, BobCMethod *functions);
 
-BobValue
-BobEnterObject(BobInterpreter *c, char *name, BobValue parent, BobCMethod *methods);
+BobValue BobEnterObject(BobScope *scope, char *name, BobValue parent, BobCMethod *methods);
 
 BobDispatch *
-BobEnterCObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties, long size
-);
+BobEnterCObjectType(BobScope *scop, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties,
+                    long size);
 
-BobDispatch *
-BobEnterCPtrObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties
-);
+BobDispatch *BobEnterCPtrObjectType(BobScope *scop, BobDispatch *parent, char *typeName, BobCMethod *methods,
+                                    BobVPMethod *properties);
 
-void
-BobEnterMethods(BobInterpreter *c, BobValue object, BobCMethod *methods);
+void BobEnterMethods(BobInterpreter *c, BobValue object, BobCMethod *methods);
 
-void
-BobEnterMethod(BobInterpreter *c, BobValue object, BobCMethod *method);
+void BobEnterMethod(BobInterpreter *c, BobValue object, BobCMethod *method);
 
-void
-BobEnterVPMethods(BobInterpreter *c, BobValue object, BobVPMethod *methods);
+void BobEnterVPMethods(BobInterpreter *c, BobValue object, BobVPMethod *methods);
 
-void
-BobEnterVPMethod(BobInterpreter *c, BobValue object, BobVPMethod *method);
+void BobEnterVPMethod(BobInterpreter *c, BobValue object, BobVPMethod *method);
 
-void
-BobEnterProperty(BobInterpreter *c, BobValue object, char *selector, BobValue value);
+void BobEnterProperty(BobInterpreter *c, BobValue object, char *selector, BobValue value);
 
 /* bobparse.c prototypes */
-void
-BobParseArguments(BobInterpreter *c, char *fmt, ...);
+void BobParseArguments(BobInterpreter *c, char *fmt, ...);
 
 /* bobheap.c prototypes */
-BobInterpreter *
-BobMakeInterpreter(void *buf, size_t size, size_t stackSize);
+BobInterpreter *BobMakeInterpreter(long size, long expandSize, long stackSize);
 
-BobInterpreter *
-BobInitInterpreter(BobInterpreter *c);
+void BobFreeInterpreter(BobInterpreter *c);
 
-void
-BobFreeInterpreter(BobInterpreter *c);
+BobScope *BobMakeScope(BobInterpreter *c, BobScope *parent);
 
-void
-BobCollectGarbage(BobInterpreter *c);
+void BobFreeScope(BobScope *scope);
 
-void
-BobDumpHeap(BobInterpreter *c);
+void BobInitScope(BobScope *scope);
 
-BobDispatch *
-BobMakeDispatch(BobInterpreter *c, char *typeName, BobDispatch *prototype);
+void BobCollectGarbage(BobInterpreter *c);
 
-void
-BobFreeDispatch(BobInterpreter *c, BobDispatch *d);
+void BobDumpHeap(BobInterpreter *c);
 
-int
-BobProtectPointer(BobInterpreter *c, BobValue *pp);
+void BobDumpScopes(BobInterpreter *c);
 
-int
-BobUnprotectPointer(BobInterpreter *c, BobValue *pp);
+BobDispatch *BobMakeDispatch(BobInterpreter *c, char *typeName, BobDispatch *prototype);
 
-BobValue
-BobAllocate(BobInterpreter *c, long size);
+void BobFreeDispatch(BobInterpreter *c, BobDispatch *d);
 
-void *
-BobAlloc(BobInterpreter *c, unsigned long size);
+int BobProtectPointer(BobInterpreter *c, BobValue *pp);
 
-void
-BobFree(BobInterpreter *c, void *ptr);
+int BobUnprotectPointer(BobInterpreter *c, BobValue *pp);
 
-void
-BobInsufficientMemory(BobInterpreter *c);
+BobValue BobAllocate(BobInterpreter *c, long size);
+
+void *BobAlloc(BobInterpreter *c, unsigned long size);
+
+void BobFree(BobInterpreter *c, void *ptr);
+
+void BobInsufficientMemory(BobInterpreter *c);
 
 /* default type handlers */
-int
-BobDefaultGetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
+int BobDefaultGetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
 
-int
-BobDefaultSetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
+int BobDefaultSetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
 
-BobValue
-BobDefaultNewInstance(BobInterpreter *c, BobValue parent);
+BobValue BobDefaultNewInstance(BobInterpreter *c, BobValue parent);
 
-BobValue
-BobDefaultCopy(BobInterpreter *c, BobValue obj);
+BobValue BobDefaultCopy(BobInterpreter *c, BobValue obj);
 
-void
-BobDefaultScan(BobInterpreter *c, BobValue obj);
+void BobDefaultScan(BobInterpreter *c, BobValue obj);
 
-BobIntegerType
-BobDefaultHash(BobValue obj);
+BobIntegerType BobDefaultHash(BobValue obj);
 
 /* bobhash.c prototypes */
-BobIntegerType
-BobHashString(unsigned char *str, int length);
+BobIntegerType BobHashString(unsigned char *str, int length);
 
 /* bobtype.c prototypes */
-void
-BobInitTypes(BobInterpreter *c);
+void BobInitTypes(BobInterpreter *c);
 
-void
-BobAddTypeSymbols(BobInterpreter *c);
+void BobAddTypeSymbols(BobInterpreter *c);
 
-BobValue
-BobEnterType(BobInterpreter *c, char *name, BobDispatch *d);
+BobValue BobEnterType(BobScope *scope, char *name, BobDispatch *d);
 
 /* bobstream.c prototypes */
-int
-BobPrint(BobInterpreter *c, BobValue val, BobStream *s);
+int BobPrint(BobInterpreter *c, BobValue val, BobStream *s);
 
-int
-BobDisplay(BobInterpreter *c, BobValue val, BobStream *s);
+int BobDisplay(BobInterpreter *c, BobValue val, BobStream *s);
 
-char *
-BobStreamGetS(char *buf, int size, BobStream *s);
+char *BobStreamGetS(char *buf, int size, BobStream *s);
 
-int
-BobStreamPutS(char *str, BobStream *s);
+int BobStreamPutS(char *str, BobStream *s);
 
-int
-BobStreamPrintF(BobStream *s, char *fmt, ...);
+int BobStreamPrintF(BobStream *s, char *fmt, ...);
 
-BobStream *
-BobInitStringStream(BobInterpreter *c, BobStringStream *s, unsigned char *buf, long len);
+BobStream *BobInitStringStream(BobInterpreter *c, BobStringStream *s, unsigned char *buf, long len);
 
-BobStream *
-BobMakeStringStream(BobInterpreter *c, unsigned char *buf, long len);
+BobStream *BobMakeStringStream(BobInterpreter *c, unsigned char *buf, long len);
 
-BobStream *
-BobInitStringOutputStream(BobInterpreter *c, BobStringOutputStream *s, unsigned char *buf, long len);
+BobStream *BobInitStringOutputStream(BobInterpreter *c, BobStringOutputStream *s, unsigned char *buf, long len);
 
-BobStream *
-BobMakeIndirectStream(BobInterpreter *c, BobStream **pStream);
+BobStream *BobMakeIndirectStream(BobInterpreter *c, BobStream **pStream);
 
-BobStream *
-BobInitFileStream(BobInterpreter *c, BobFileStream *s, FILE *fp);
+BobStream *BobInitFileStream(BobInterpreter *c, BobFileStream *s, FILE *fp);
 
-BobStream *
-BobMakeFileStream(BobInterpreter *c, FILE *fp);
+BobStream *BobMakeFileStream(BobInterpreter *c, FILE *fp);
 
-BobStream *
-BobOpenFileStream(BobInterpreter *c, char *fname, char *mode);
+BobStream *BobOpenFileStream(BobInterpreter *c, char *fname, char *mode);
 
 /* bobstdio.c prototypes */
-void
-BobUseStandardIO(BobInterpreter *c);
+void BobUseStandardIO(BobInterpreter *c);
 
 /* bobmath.c prototypes */
-void
-BobUseMath(BobInterpreter *c);
+void BobUseMath(BobInterpreter *c);
 
 /* bobobject.c prototypes */
-void
-BobInitObject(BobInterpreter *c);
+void BobInitObject(BobInterpreter *c);
 
-void
-BobAddProperty(
-        BobInterpreter *c, BobValue obj, BobValue tag, BobValue value, BobIntegerType hashValue, BobIntegerType i
-);
+void BobAddProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value, BobIntegerType hashValue,
+                    BobIntegerType i);
 
 /* bobmethod.c prototypes */
-void
-BobInitMethod(BobInterpreter *c);
+void BobInitMethod(BobInterpreter *c);
 
 /* bobsymbol.c prototypes */
-void
-BobInitSymbol(BobInterpreter *c);
+void BobInitSymbol(BobInterpreter *c);
 
 /* bobvector.c prototypes */
-void
-BobInitVector(BobInterpreter *c);
+void BobInitVector(BobInterpreter *c);
 
-long
-BobBasicVectorSizeHandler(BobValue obj);
+long BobBasicVectorSizeHandler(BobValue obj);
 
-void
-BobBasicVectorScanHandler(BobInterpreter *c, BobValue obj);
+void BobBasicVectorScanHandler(BobInterpreter *c, BobValue obj);
 
 /* bobstring.c prototypes */
-void
-BobInitString(BobInterpreter *c);
+void BobInitString(BobInterpreter *c);
 
 /* bobcobject.c prototypes */
-void
-BobDestroyUnreachableCObjects(BobInterpreter *c);
+void BobDestroyUnreachableCObjects(BobInterpreter *c);
 
-void
-BobDestroyAllCObjects(BobInterpreter *c);
+void BobDestroyAllCObjects(BobInterpreter *c);
 
 /* bobinteger.c prototypes */
-void
-BobInitInteger(BobInterpreter *c);
+void BobInitInteger(BobInterpreter *c);
 
 /* bobfloat.c prototypes */
-void
-BobInitFloat(BobInterpreter *c);
+void BobInitFloat(BobInterpreter *c);
+
+/* bobmatrix.c prototypes */
+void BobInitMatrix(BobInterpreter *c);
 
 /* bobfile.c prototypes */
-void
-BobInitFile(BobInterpreter *c);
+void BobInitFile(BobInterpreter *c);
 
-BobValue
-BobMakeFile(BobInterpreter *c, BobStream *s);
+BobValue BobMakeFile(BobInterpreter *c, BobStream *s);
 
 /* bobfcn.c prototypes */
-void
-BobEnterLibrarySymbols(BobInterpreter *c);
+void BobEnterLibrarySymbols(BobInterpreter *c);
 
 /* bobeval.c prototypes */
-void
-BobUseEval(BobInterpreter *c, void *buf, size_t size);
+void BobUseEval(BobInterpreter *c);
 
-BobValue
-BobEvalString(BobInterpreter *c, char *str);
+void BobUnuseEval(BobInterpreter *c);
 
-BobValue
-BobEvalStream(BobInterpreter *c, BobStream *s);
+BobValue BobEvalString(BobScope *scope, char *str);
 
-int
-BobLoadFile(BobInterpreter *c, char *fname, BobStream *os);
+BobValue BobEvalStream(BobScope *scope, BobStream *s);
 
-void
-BobLoadStream(BobInterpreter *c, BobStream *is, BobStream *os);
+int BobLoadFile(BobScope *scope, char *fname, BobStream *os);
+
+void BobLoadStream(BobScope *scope, BobStream *is, BobStream *os);
 
 /* bobwcode.c prototypes */
-int
-BobCompileFile(BobInterpreter *c, char *iname, char *oname);
+int BobCompileFile(BobScope *scope, char *iname, char *oname);
 
-int
-BobCompileString(BobInterpreter *c, char *str, BobStream *os);
+int BobCompileString(BobScope *scope, char *str, BobStream *os);
 
-int
-BobCompileStream(BobInterpreter *c, BobStream *is, BobStream *os);
+int BobCompileStream(BobScope *scope, BobStream *is, BobStream *os);
 
 /* bobrcode.c prototypes */
-int
-BobLoadObjectFile(BobInterpreter *c, char *fname, BobStream *os);
+int BobLoadObjectFile(BobScope *scope, char *fname, BobStream *os);
 
-int
-BobLoadObjectStream(BobInterpreter *c, BobStream *s, BobStream *os);
+int BobLoadObjectStream(BobScope *scope, BobStream *s, BobStream *os);
 
 /* bobdebug.c prototypes */
-void
-BobDecodeProcedure(BobInterpreter *c, BobValue method, BobStream *stream);
+void BobDecodeProcedure(BobInterpreter *c, BobValue method, BobStream *stream);
 
-int
-BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream);
+int BobDecodeInstruction(BobInterpreter *c, BobValue code, int lc, BobStream *stream);
 
 /* boberror.c prototypes */
-void
-BobCallErrorHandler(BobInterpreter *c, int code, ...);
+void BobCallErrorHandler(BobInterpreter *c, int code, ...);
 
-void
-BobShowError(BobInterpreter *c, int code, va_list ap);
+void BobShowError(BobInterpreter *c, int code, va_list ap);
 
-char *
-BobGetErrorText(int code);
+char *BobGetErrorText(int code);
 
 #endif

@@ -5,20 +5,13 @@
 #include "bob.h"
 
 /* prototypes */
-static void
-Fatal(char *fmt, ...);
+static void Fatal(char *fmt, ...);
 
 /* main - the main routine */
-int
-main(int argc, char *argv[])
-{
-    FILE *fp;
-    FILE *ifp;
-    FILE *ofp;
-
+int main(int argc, char *argv[]) {
+    FILE *fp, *ifp, *ofp;
     char fileName[256];
-
-    int  ch;
+    int ch;
 
     /* check the argument list */
     if (argc != 3) {
@@ -41,7 +34,6 @@ main(int argc, char *argv[])
     putc('O', ofp);
     putc('B', ofp);
     putc('O', ofp);
-
     putc((BobFaslVersion >> 24) & 0xff, ofp);
     putc((BobFaslVersion >> 16) & 0xff, ofp);
     putc((BobFaslVersion >> 8) & 0xff, ofp);
@@ -50,17 +42,13 @@ main(int argc, char *argv[])
     /* read each input filename */
     while (fscanf(fp, "%s", fileName) == 1) {
         printf("Merging '%s'\n", fileName);
-
         if ((ifp = fopen(fileName, "rb")) == NULL) {
             Fatal("can't open '%s'", fileName);
         }
-
         fseek(ifp, 8, SEEK_SET);
-
         while ((ch = getc(ifp)) != EOF) {
             putc(ch, ofp);
         }
-
         fclose(ifp);
     }
 
@@ -73,18 +61,12 @@ main(int argc, char *argv[])
 }
 
 /* Fatal - report a fatal error and exit */
-static void
-Fatal(char *fmt, ...)
-{
+static void Fatal(char *fmt, ...) {
     va_list ap;
-
     va_start(ap, fmt);
-
     fprintf(stderr, "error: ");
     vfprintf(stderr, fmt, ap);
     putc('\n', stderr);
-
     va_end(ap);
-
     exit(1);
 }

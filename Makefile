@@ -1,5 +1,8 @@
 # XCFLAGS?=-m32
-
+# most copyright says 2001 (one says 1999)
+# internally in the old makefile we compile to bob2
+# so lets call it bot2 or bob-2001
+#
 BINDIR=./bin
 LIBDIR=./lib
 OBJDIR=./obj
@@ -13,10 +16,11 @@ LIBS=$(LIBDIR)/libbobc.a $(LIBDIR)/libbobi.a
 HDRS=$(HDRDIR)/bob.h $(HDRDIR)/bobint.h $(HDRDIR)/bobcom.h
 
 WFLAGS=-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers -Wimplicit-fallthrough=2
+# WFLAGS=-Wall
 XINCLUDES=-I$(HDRDIR) -I./bobcom -I./bobint
 
 #XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT -DWITH_TRACE
-XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT
+#XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT
 
 CFLAGS=$(XCFLAGS) $(WFLAGS) $(XINCLUDES) $(XDEFINES)
 
@@ -144,11 +148,6 @@ clean:	$(DIRS)
 	rm -rf $(LIBDIR)
 	rm -rf $(OBJDIR)
 
-# test direct and compile , interpreter
-$TESTDIR/test.bbo: $(BOBFILES)
-	./bin/bob  -v -d ./test/test.bob >./test/out1.txt
-	./bin/bobc -v -d -o ./test/test.bbo ./test/test.bob >./test/out2.txt
-	./bin/bobi -v -d ./test/test.bbo >./test/out3.txt
-	rm ./test/test.bbo
 
-test: $TESTDIR/test.bbo
+test:
+	( cd test; ./all_tests.sh )

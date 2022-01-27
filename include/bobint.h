@@ -61,5 +61,8 @@
 #define BobOpCLOSE      0x33    /* create a closure */
 #define BobOpSWITCH     0x34    /* switch dispatch */
 #define BobOpARGSGE     0x35    /* argc greater than or equal to */
+#define BobOpPUSHSCOPE  0x36    /* push two copies of the current scope object */
+#define BobOpTHROW      0x37    /* throw an exception */
+#define BobOpNEWMATRIX  0x38    /* create a new matrix */
 
 #endif

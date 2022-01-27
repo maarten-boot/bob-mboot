@@ -37,6 +37,7 @@ define zzz(a="")
 // after passing the func we can call it inside the function by adding () and parameters if required/needed
 ddd(nil, zzz);
 
+p7 = nil;
 define jjj() {
     local p1 = 8;
     local p4 = "jj";
@@ -55,6 +56,7 @@ define jjj() {
     // outside of the block where we declared p7 its value will be unknown so nil again
     stdout.Display(p1, " ", p4, " ", p7, "\n");
 
+    // p7 was not defined before: Error: Unbound variable - p7
     p7 = 999;
 }
 

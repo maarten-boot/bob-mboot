@@ -14,72 +14,82 @@
 #define ScanValue(c, o)                  (BobQuickGetDispatch(o)->scan(c,o))
 
 /* prototypes */
-static void
-InitInterpreter(BobInterpreter *c);
+static void InitInterpreter(BobInterpreter *c);
 
-static BobMemorySpace *
-InitMemorySpace(void *buf, size_t size);
+static BobMemorySpace *NewMemorySpace(BobInterpreter *c, size_t size);
 
 /* BobMakeInterpreter - make a new interpreter */
-BobInterpreter *
-BobMakeInterpreter(void *buf, size_t size, size_t stackSize)
-{
-    size_t         stackSizeInBytes = stackSize * sizeof(BobValue);
-    size_t         memorySpaceSize  = (size - sizeof(BobInterpreter) - stackSizeInBytes) / 2;
+BobInterpreter *BobMakeInterpreter(long size, long expandSize, long stackSize) {
     BobInterpreter *c;
 
-    /* make sure there is enough space */
-    if (size < sizeof(BobInterpreter) + stackSizeInBytes + 2 * sizeof(BobMemorySpace)) {
+    /* allocate the interpreter structure */
+    if ((c = (BobInterpreter *) malloc(sizeof(BobInterpreter))) == NULL) {
         return NULL;
     }
 
-    /* initialize the interpreter */
-    c = (BobInterpreter *) buf;
+    /* initialize */
     memset(c, 0, sizeof(BobInterpreter));
+    c->expandSize = expandSize;
+
+    /* make the initial old memory space */
+    if ((c->oldSpace = NewMemorySpace(c, size)) == NULL) {
+        free(c);
+        return NULL;
+    }
+    c->pNextOld = &c->oldSpace->next;
+
+    /* make the initial new memory space */
+    if ((c->newSpace = NewMemorySpace(c, size)) == NULL) {
+        BobFree(c, c->oldSpace);
+        c->oldSpace = NULL;
+        free(c);
+        return NULL;
+    }
+    c->pNextNew = &c->newSpace->next;
+
+    /* make the stack */
+    if ((c->stack = (BobValue *) BobAlloc(c, (size_t) (stackSize * sizeof(BobValue)))) == NULL) {
+        BobFree(c, c->oldSpace);
+        BobFree(c, c->newSpace);
+        free(c);
+        return NULL;
+    }
 
     /* initialize the stack */
-    c->stack    = (BobValue *) (c + 1);
     c->stackTop = c->stack + stackSize;
-
-    c->fp       = (BobFrame *) c->stackTop;
-    c->sp       = c->stackTop;
-
-    /* initialize the semi-spaces */
-    c->oldSpace = InitMemorySpace((char *) c->stack + stackSizeInBytes, memorySpaceSize);
-    c->newSpace = InitMemorySpace((char *) c->oldSpace + memorySpaceSize, memorySpaceSize);
-    c->gcCount  = 0;
-
-    /* return the new interpreter context */
-    return c;
-}
-
-/* BobInitInterpreter - initialize a new interpreter */
-BobInterpreter *
-BobInitInterpreter(BobInterpreter *c)
-{
-    int i;
+    c->fp = (BobFrame *) c->stackTop;
+    c->sp = c->stackTop;
 
     /* make the symbol table */
-    c->symbols = BobMakeHashTable(c, BobSymbolHashTableSize);
+    c->symbols = BobMakeObject(c, c->nilValue);
 
     /* make the nil symbol */
-    c->nilValue = BobMakeSymbol(c, (unsigned char *) "nil", 3);
-    BobSetGlobalValue(c->nilValue, c->nilValue);
-    BobSetSymbolNext(c->nilValue, c->nilValue);
+    c->nilValue = BobMakeSymbol(c, "nil", 3);
 
-    /* finish initializing the symbol hash table */
-    for (i = 0; i < BobHashTableSize(c->symbols); ++i)
-        BobSetHashTableElement(c->symbols, i, c->nilValue);
+    /* fixup the symbol table */
+    BobSetObjectClass(c->symbols, c->nilValue);
+    BobSetObjectProperties(c->symbols, c->nilValue);
 
-    /* initialize the vm registers */
-    c->val = c->nilValue;
-    c->env = c->nilValue;
+    /* initialize the global scope */
+    c->globalScope.c = c;
+    c->globalScope.globals = BobMakeObject(c, c->nilValue);
+    c->globalScope.next = c->scopes;
+    c->scopes = &c->globalScope;
+
+    /* initialize the current scope */
+    c->currentScope.c = c;
+    c->currentScope.globals = c->globalScope.globals;
+    c->currentScope.next = c->scopes;
+    c->scopes = &c->currentScope;
+
+    /* enter nil into the symbol table */
+    BobSetGlobalValue(BobCurrentScope(c), c->nilValue, c->nilValue);
 
     /* make the true and false symbols */
     c->trueValue = BobInternCString(c, "true");
-    BobSetGlobalValue(c->trueValue, c->trueValue);
+    BobSetGlobalValue(BobCurrentScope(c), c->trueValue, c->trueValue);
     c->falseValue = c->nilValue;
-    BobEnterVariable(c, "false", c->falseValue);
+    BobEnterVariable(BobGlobalScope(c), "false", c->falseValue);
 
     /* create the base of the object heirarchy */
     BobInitObject(c);
@@ -91,11 +101,10 @@ BobInitInterpreter(BobInterpreter *c)
     BobInitSymbol(c);
     BobInitString(c);
     BobInitInteger(c);
-
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
     BobInitFloat(c);
+    BobInitMatrix(c);
 #endif
-
     BobAddTypeSymbols(c);
 
     /* initialize the external types */
@@ -104,19 +113,38 @@ BobInitInterpreter(BobInterpreter *c)
     /* initialize the interpreter */
     InitInterpreter(c);
 
+    /* initialize the standard i/o streams */
+    c->standardInput = &BobNullStream;
+    c->standardOutput = &BobNullStream;
+    c->standardError = &BobNullStream;
+
     /* return successfully */
     return c;
 }
 
 /* BobFreeInterpreter - free an interpreter structure */
-void
-BobFreeInterpreter(BobInterpreter *c)
-{
+void BobFreeInterpreter(BobInterpreter *c) {
+    BobMemorySpace *space, *nextSpace;
     BobProtectedPtrs *p, *nextp;
-    BobDispatch      *d, *nextd;
+    BobDispatch *d, *nextd;
+    BobScope *s, *nexts;
+    BobSymbolBlock *b, *nextb;
 
     /* destroy cobjects */
     /*BobDestroyAllCObjects(c)*/;
+
+    /* free memory spaces */
+    for (space = c->oldSpace; space != NULL; space = nextSpace) {
+        nextSpace = space->next;
+        BobFree(c, space);
+    }
+    for (space = c->newSpace; space != NULL; space = nextSpace) {
+        nextSpace = space->next;
+        BobFree(c, space);
+    }
+
+    /* free the stack */
+    BobFree(c, c->stack);
 
     /* free the type list */
     for (d = c->types; d != NULL; d = nextd) {
@@ -129,72 +157,157 @@ BobFreeInterpreter(BobInterpreter *c)
         nextp = p->next;
         BobFree(c, p);
     }
+
+    /* free the variable scopes */
+    for (s = c->scopes; s != NULL; s = nexts) {
+        nexts = s->next;
+        if (s != &c->globalScope && s != &c->currentScope) {
+            BobFree(c, s);
+        }
+    }
+
+    /* free the symbols */
+    for (b = c->symbolSpace; b != NULL; b = nextb) {
+        nextb = b->next;
+        BobFree(c, b);
+    }
+
+    /* free the interpreter */
+    free(c);
+}
+
+/* BobMakeScope - make a variable scope structure */
+BobScope *BobMakeScope(BobInterpreter *c, BobScope *parent) {
+    BobScope *scope = (BobScope *) BobAlloc(c, sizeof(BobScope));
+    if (scope) {
+        scope->c = c;
+        scope->globals = BobMakeObject(c, BobScopeObject(parent));
+        scope->next = c->scopes;
+        c->scopes = scope;
+    }
+    return scope;
+}
+
+/* BobFreeScope - free a variable scope structure */
+void BobFreeScope(BobScope *scope) {
+    BobInterpreter *c = scope->c;
+    BobScope **pNext, *s;
+    if (scope != BobGlobalScope(c) && scope != BobCurrentScope(c)) {
+        for (pNext = &c->scopes; (s = *pNext) != NULL; pNext = &s->next) {
+            if (s == scope) {
+                *pNext = s->next;
+                break;
+            }
+        }
+        BobFree(c, scope);
+    }
+}
+
+/* BobInitScope - remove all variables from a scope */
+void BobInitScope(BobScope *scope) {
+    BobValue obj = BobScopeObject(scope);
+    BobSetObjectProperties(obj, scope->c->nilValue);
+    BobSetObjectPropertyCount(obj, 0);
 }
 
 /* InitInterpreter - initialize an interpreter structure */
-static void
-InitInterpreter(BobInterpreter *c)
-{
+static void InitInterpreter(BobInterpreter *c) {
     /* initialize the stack */
     c->fp = (BobFrame *) c->stackTop;
     c->sp = c->stackTop;
 
     /* initialize the registers */
-    c->val  = c->nilValue;
-    c->env  = c->nilValue;
+    c->val = c->nilValue;
+    c->env = c->nilValue;
     c->code = NULL;
 }
 
-/* InitMemorySpace - initialize a semi-space */
-static BobMemorySpace *
-InitMemorySpace(void *buf, size_t size)
-{
-    BobMemorySpace *space = (BobMemorySpace *) buf;
-    space->base     = (unsigned char *) (space + 1);
-    space->free     = space->base;
-    space->top      = space->base + size - sizeof(BobMemorySpace);
-    space->cObjects = NULL;
+/* NewMemorySpace - make a new semi-space */
+static BobMemorySpace *NewMemorySpace(BobInterpreter *c, size_t size) {
+    BobMemorySpace *space;
+    if ((space = (BobMemorySpace *) BobAlloc(c, (size_t) (sizeof(BobMemorySpace) + size))) != NULL) {
+        space->base = (unsigned char *) space + sizeof(BobMemorySpace);
+        space->free = space->base;
+        space->top = space->base + size;
+        space->cObjects = NULL;
+        space->next = NULL;
+    }
     return space;
 }
 
 /* BobAllocate - allocate memory for a value */
-BobValue
-BobAllocate(BobInterpreter *c, long size)
-{
+BobValue BobAllocate(BobInterpreter *c, long size) {
+    BobMemorySpace *newSpace;
+#if 0
+    BobMemorySpace *oldSpace;
+    long expandSize;
+#endif
     BobValue val;
 
     /* look for free space */
-    if (c->newSpace->free + size <= c->newSpace->top) {
-        val = (BobValue) c->newSpace->free;
-        c->newSpace->free += size;
-        return val;
+    for (newSpace = c->newSpace; newSpace != NULL; newSpace = newSpace->next) {
+        if (newSpace->free + size <= newSpace->top) {
+            val = (BobValue) newSpace->free;
+            newSpace->free += size;
+            return val;
+        }
     }
 
     /* collect garbage */
     BobCollectGarbage(c);
 
     /* look again */
-    if (c->newSpace->free + size <= c->newSpace->top) {
-        val = (BobValue) c->newSpace->free;
-        c->newSpace->free += size;
-        return val;
+    for (newSpace = c->newSpace; newSpace != NULL; newSpace = newSpace->next) {
+        if (newSpace->free + size <= newSpace->top) {
+            val = (BobValue) newSpace->free;
+            newSpace->free += size;
+            return val;
+        }
     }
 
-    /* insufficient memory */
-    BobInsufficientMemory(c);
+#if 0
+    /* check for being able to expand memory */
+    if ((expandSize = c->expandSize) == 0)
+        BobInsufficientMemory(c);
+        
+    /* make sure we allocate at least as much as needed */
+    if (size > expandSize)
+        expandSize = size;
+    
+    /* allocate more old space */
+    if (!(oldSpace = NewMemorySpace(c,expandSize)))
+        BobInsufficientMemory(c);
+    
+    /* allocate more new space */
+    if (!(newSpace = NewMemorySpace(c,expandSize))) {
+        BobFree(c,oldSpace);
+        BobInsufficientMemory(c);
+    }
 
+    /* link in the new spaces */
+    *c->pNextOld = oldSpace;
+    c->pNextOld = &oldSpace->next;
+    *c->pNextNew = newSpace;
+    c->pNextNew = &newSpace->next;
+
+    /* return some of the newly allocated space */
+    val = (BobValue)newSpace->free;
+    newSpace->free += size;
+    return val;
+#else
+    BobInsufficientMemory(c);
     return c->nilValue; /* never reached */
+#endif
 }
 
 /* BobMakeDispatch - make a new type dispatch */
-BobDispatch *
-BobMakeDispatch(BobInterpreter *c, char *typeName, BobDispatch *prototype)
-{
-    int         totalSize = sizeof(BobDispatch) + strlen(typeName) + 1;
+BobDispatch *BobMakeDispatch(BobInterpreter *c, char *typeName, BobDispatch *prototype) {
+    int totalSize = sizeof(BobDispatch) + strlen(typeName) + 1;
     BobDispatch *d;
 
     /* allocate a new dispatch structure */
     if ((d = (BobDispatch *) BobAlloc(c, totalSize)) == NULL) {
+        BobDrop(c, 1);
         return NULL;
     }
     memset(d, 0, totalSize);
@@ -206,7 +319,7 @@ BobMakeDispatch(BobInterpreter *c, char *typeName, BobDispatch *prototype)
     strcpy(d->typeName, typeName);
 
     /* add the type to the type list */
-    d->next  = c->types;
+    d->next = c->types;
     c->types = d;
 
     /* return the new type */
@@ -214,48 +327,52 @@ BobMakeDispatch(BobInterpreter *c, char *typeName, BobDispatch *prototype)
 }
 
 /* BobFreeDispatch - free a type dispatch structure */
-void
-BobFreeDispatch(BobInterpreter *c, BobDispatch *d)
-{
+void BobFreeDispatch(BobInterpreter *c, BobDispatch *d) {
     BobFree(c, d);
 }
 
 /* BobCollectGarbage - garbage collect a heap */
-void
-BobCollectGarbage(BobInterpreter *c)
-{
+void BobCollectGarbage(BobInterpreter *c) {
     BobProtectedPtrs *ppb;
-    unsigned char    *scan;
-    BobMemorySpace   *ms;
-    BobDispatch      *d;
-    BobValue         obj;
+    unsigned char *scan;
+    BobMemorySpace *ms;
+    BobSavedState *ss;
+    BobScope *scope;
+    BobDispatch *d;
+    BobValue obj;
 
-    // if verbose
-    if(0) {
-        BobStreamPutS("[GC", c->standardError);
-    }
+    BobStreamPutS("[GC", c->standardError);
+
     /* reverse the memory spaces */
     ms = c->oldSpace;
     c->oldSpace = c->newSpace;
     c->newSpace = ms;
-    ms->free    = ms->base;
+
+    /* reset the new space pointers */
+    for (; ms != NULL; ms = ms->next) {
+        ms->free = ms->base;
+    }
 
     /* copy the root objects */
-    c->nilValue    = BobCopyValue(c, c->nilValue);
-    c->trueValue   = BobCopyValue(c, c->trueValue);
-    c->falseValue  = BobCopyValue(c, c->falseValue);
-    c->symbols     = BobCopyValue(c, c->symbols);
+    c->nilValue = BobCopyValue(c, c->nilValue);
+    c->trueValue = BobCopyValue(c, c->trueValue);
+    c->falseValue = BobCopyValue(c, c->falseValue);
+    c->symbols = BobCopyValue(c, c->symbols);
     c->objectValue = BobCopyValue(c, c->objectValue);
 
-    /* copy basic types */
-    c->methodObject  = BobCopyValue(c, c->methodObject);
-    c->vectorObject  = BobCopyValue(c, c->vectorObject);
-    c->symbolObject  = BobCopyValue(c, c->symbolObject);
-    c->stringObject  = BobCopyValue(c, c->stringObject);
-    c->integerObject = BobCopyValue(c, c->integerObject);
+    /* copy global variable scopes */
+    for (scope = c->scopes; scope != NULL; scope = scope->next) {
+        scope->globals = BobCopyValue(c, scope->globals);
+    }
 
+    /* copy basic types */
+    c->methodObject = BobCopyValue(c, c->methodObject);
+    c->vectorObject = BobCopyValue(c, c->vectorObject);
+    c->symbolObject = BobCopyValue(c, c->symbolObject);
+    c->stringObject = BobCopyValue(c, c->stringObject);
+    c->integerObject = BobCopyValue(c, c->integerObject);
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-    c->floatObject = BobCopyValue(c, c->floatObject);
+    c->floatObject = BobCopyValue(c,c->floatObject);
 #endif
 
     /* copy the type list */
@@ -267,12 +384,19 @@ BobCollectGarbage(BobInterpreter *c)
 
     /* copy protected pointers */
     for (ppb = c->protectedPtrs; ppb != NULL; ppb = ppb->next) {
-
-        BobValue **pp  = ppb->pointers;
-        int      count = ppb->count;
-
+        BobValue **pp = ppb->pointers;
+        int count = ppb->count;
         for (; --count >= 0; ++pp) {
             **pp = BobCopyValue(c, **pp);
+        }
+    }
+
+    /* copy the saved interpreter states */
+    for (ss = c->savedState; ss != NULL; ss = ss->next) {
+        ss->globals = BobCopyValue(c, ss->globals);
+        ss->env = BobCopyValue(c, ss->env);
+        if (ss->code != NULL) {
+            ss->code = BobCopyValue(c, ss->code);
         }
     }
 
@@ -295,16 +419,11 @@ BobCollectGarbage(BobInterpreter *c)
 
     /* scan and copy until all accessible objects have been copied */
     scan = c->newSpace->base;
-
     while (scan < c->newSpace->free) {
         obj = (BobValue) scan;
-
-#if 0
-        BobStreamPutS("Scanning ",c->standardOutput);
-        BobPrint(c,obj,c->standardOutput);
-        BobStreamPutC('\n',c->standardOutput);
-#endif
-
+        //BobStreamPutS("Scanning ",c->standardOutput);
+        //BobPrint(c,obj,c->standardOutput);
+        //BobStreamPutC('\n',c->standardOutput);
         scan += ValueSize(obj);
         ScanValue(c, obj);
     }
@@ -313,23 +432,14 @@ BobCollectGarbage(BobInterpreter *c)
     if (c->code) {
         long pcoff = c->pc - c->cbase;
         c->cbase = BobStringAddress(BobCompiledCodeBytecodes(c->code));
-        c->pc    = c->cbase + pcoff;
+        c->pc = c->cbase + pcoff;
     }
 
-    /* count the garbage collections */
-    ++c->gcCount;
-
-    // add verbose switch
-    if(0) {
+    {
         char buf[128];
-
-        sprintf(
-                buf,
-                " - %lu bytes free out of %lu, collections %lu]\n",
-                (unsigned long) (c->newSpace->top - c->newSpace->free),
-                (unsigned long) (c->newSpace->top - c->newSpace->base),
-                (unsigned long) c->gcCount
-        );
+        sprintf(buf, " - %d bytes free out of %d, total memory %lu, allocations %lu]\n",
+                c->newSpace->top - c->newSpace->free, c->newSpace->top - c->newSpace->base, c->totalMemory,
+                c->allocCount);
         BobStreamPutS(buf, c->standardError);
     }
 
@@ -338,76 +448,89 @@ BobCollectGarbage(BobInterpreter *c)
 }
 
 /* BobDumpHeap - dump the contents of the bob heap */
-void
-BobDumpHeap(BobInterpreter *c)
-{
+void BobDumpHeap(BobInterpreter *c) {
     unsigned char *scan;
 
     /* first collect the garbage */
-    /* BobCollectGarbage(c); */
+    //BobCollectGarbage(c);
 
     /* dump each heap object */
     scan = c->newSpace->base;
     while (scan < c->newSpace->free) {
         BobValue val = (BobValue) scan;
         scan += ValueSize(val);
-
         //if (BobCObjectP(val)) {
-
         BobPrint(c, val, c->standardOutput);
         BobStreamPutC('\n', c->standardOutput);
-
         //}
+    }
+}
+
+/* BobDumpScopes - dump the contents of the bob heap */
+void BobDumpScopes(BobInterpreter *c) {
+    BobScope *scope = c->scopes;
+    while (scope) {
+        BobValue props = BobObjectProperties(scope->globals);
+        if (BobHashTableP(props)) {
+            int i;
+            BobStreamPrintF(c->standardOutput, "Scope %08lx:%08lx (hash table)\n", scope, scope->globals);
+            for (i = 0; i < BobHashTableSize(props); ++i) {
+                BobValue p;
+                BobStreamPrintF(c->standardOutput, " Bucket %d\n", i);
+                for (p = BobHashTableElement(props, i); p != c->nilValue; p = BobPropertyNext(p)) {
+                    BobStreamPutS("  ", c->standardOutput);
+                    BobPrint(c, BobPropertyTag(p), c->standardOutput);
+                    BobStreamPutS(" = ", c->standardOutput);
+                    BobPrint(c, BobPropertyValue(p), c->standardOutput);
+                    BobStreamPutC('\n', c->standardOutput);
+                }
+            }
+        } else {
+            BobValue p;
+            BobStreamPrintF(c->standardOutput, "Scope %08lx:%08lx (list)\n", scope, scope->globals);
+            for (p = props; p != c->nilValue; p = BobPropertyNext(p)) {
+                BobStreamPutS("  ", c->standardOutput);
+                BobPrint(c, BobPropertyTag(p), c->standardOutput);
+                BobStreamPutS(" = ", c->standardOutput);
+                BobPrint(c, BobPropertyValue(p), c->standardOutput);
+                BobStreamPutC('\n', c->standardOutput);
+            }
+        }
+        scope = scope->next;
     }
 }
 
 /* default handlers */
 
 /* BobDefaultGetProperty - get the value of a property */
-int
-BobDefaultGetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue)
-{
+int BobDefaultGetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue) {
     return FALSE;
 }
 
 /* BobDefaultSetProperty - set the value of a property */
-int
-BobDefaultSetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value)
-{
+int BobDefaultSetProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value) {
     return FALSE;
 }
 
 /* BobDefaultNewInstance - create a new instance */
-BobValue
-BobDefaultNewInstance(BobInterpreter *c, BobValue parent)
-{
+BobValue BobDefaultNewInstance(BobInterpreter *c, BobValue parent) {
     BobCallErrorHandler(c, BobErrNewInstance, parent);
-
     return c->nilValue; /* never reached */
 }
 
 /* BobDefaultPrint - print an object */
-int
-BobDefaultPrint(BobInterpreter *c, BobValue obj, BobStream *s)
-{
+int BobDefaultPrint(BobInterpreter *c, BobValue obj, BobStream *s) {
     char buf[64];
-
     sprintf(buf, "%08lx", (long) obj);
-
-    return BobStreamPutC('<', s) == '<'
-           && BobStreamPutS(BobTypeName(obj), s) == 0
-           && BobStreamPutC('-', s) == '-'
-           && BobStreamPutS(buf, s) == 0
-           && BobStreamPutC('>', s) == '>';
+    return BobStreamPutC('<', s) == '<' && BobStreamPutS(BobTypeName(obj), s) == 0 && BobStreamPutC('-', s) == '-' &&
+           BobStreamPutS(buf, s) == 0 && BobStreamPutC('>', s) == '>';
 }
 
 #define NewObjectP(c, obj)   ((unsigned char *)(obj) >= (c)->newSpace->base && (unsigned char *)(obj) < (c)->newSpace->free)
 
 /* BobDefaultCopy - copy an object from old space to new space */
-BobValue
-BobDefaultCopy(BobInterpreter *c, BobValue obj)
-{
-    long     size = ValueSize(obj);
+BobValue BobDefaultCopy(BobInterpreter *c, BobValue obj) {
+    long size = ValueSize(obj);
     BobValue newObj;
 
     /* don't copy an object that is already in new space */
@@ -431,55 +554,35 @@ BobDefaultCopy(BobInterpreter *c, BobValue obj)
 }
 
 /* BobBobDefaultScan - scan an object without embedded pointers */
-void
-BobDefaultScan(BobInterpreter *c, BobValue obj)
-{
+void BobDefaultScan(BobInterpreter *c, BobValue obj) {
 }
 
 /* BobDefaultHash - default object hash routine */
-BobIntegerType
-BobDefaultHash(BobValue obj)
-{
+BobIntegerType BobDefaultHash(BobValue obj) {
     return 0;
 }
 
 /* BROKEN HEART */
 
-static long
-BrokenHeartSize(BobValue obj);
+static long BrokenHeartSize(BobValue obj);
 
-static BobValue
-BrokenHeartCopy(BobInterpreter *c, BobValue obj);
+static BobValue BrokenHeartCopy(BobInterpreter *c, BobValue obj);
 
 BobDispatch BobBrokenHeartDispatch = {
-        "BrokenHeart",
-        &BobBrokenHeartDispatch,
-        BobDefaultGetProperty,
-        BobDefaultSetProperty,
-        BobDefaultNewInstance,
-        BobDefaultPrint,
-        BrokenHeartSize,
-        BrokenHeartCopy,
-        BobDefaultScan,
-        BobDefaultHash
+        "BrokenHeart", &BobBrokenHeartDispatch, BobDefaultGetProperty, BobDefaultSetProperty, BobDefaultNewInstance,
+        BobDefaultPrint, BrokenHeartSize, BrokenHeartCopy, BobDefaultScan, BobDefaultHash
 };
 
-static long
-BrokenHeartSize(BobValue obj)
-{
+static long BrokenHeartSize(BobValue obj) {
     return sizeof(BobBrokenHeart);
 }
 
-static BobValue
-BrokenHeartCopy(BobInterpreter *c, BobValue obj)
-{
+static BobValue BrokenHeartCopy(BobInterpreter *c, BobValue obj) {
     return BobBrokenHeartForwardingAddr(obj);
 }
 
 /* BobProtectPointer - protect a pointer from the garbage collector */
-int
-BobProtectPointer(BobInterpreter *c, BobValue *pp)
-{
+int BobProtectPointer(BobInterpreter *c, BobValue *pp) {
     BobProtectedPtrs *ppb = c->protectedPtrs;
 
     /* look for space in an existing block */
@@ -498,9 +601,9 @@ BobProtectPointer(BobInterpreter *c, BobValue *pp)
     }
 
     /* initialize the new block */
-    ppb->next        = c->protectedPtrs;
+    ppb->next = c->protectedPtrs;
     c->protectedPtrs = ppb;
-    ppb->count       = 0;
+    ppb->count = 0;
 
     /* add the pointer to the new block */
     ppb->pointers[ppb->count++] = pp;
@@ -509,13 +612,11 @@ BobProtectPointer(BobInterpreter *c, BobValue *pp)
 }
 
 /* BobUnprotectPointer - unprotect a pointer from the garbage collector */
-int
-BobUnprotectPointer(BobInterpreter *c, BobValue *pp)
-{
+int BobUnprotectPointer(BobInterpreter *c, BobValue *pp) {
     BobProtectedPtrs *ppb = c->protectedPtrs;
     while (ppb) {
         BobValue **ppp = ppb->pointers;
-        int      cnt   = ppb->count;
+        int cnt = ppb->count;
         while (--cnt >= 0) {
             if (*ppp++ == pp) {
                 while (--cnt >= 0) {
@@ -531,32 +632,21 @@ BobUnprotectPointer(BobInterpreter *c, BobValue *pp)
     return FALSE;
 }
 
-static unsigned long totalAlloc = sizeof(BobInterpreter);
-
 /* BobAlloc - allocate memory */
-void *
-BobAlloc(BobInterpreter *c, unsigned long size)
-{
+void *BobAlloc(BobInterpreter *c, unsigned long size) {
     unsigned long totalSize = sizeof(unsigned long) + size;
-    unsigned long *p        = malloc(totalSize);
+    unsigned long *p = malloc(totalSize);
     if (p) {
         *p++ = totalSize;
         c->totalMemory += totalSize;
         ++c->allocCount;
-
-        // if verbose or printd stderr
-        // printf("BobAlloc %lu %lu\n", size, totalAlloc);
-
-        totalAlloc += size;
     }
     return (void *) p;
 }
 
 /* BobFree - free memory */
-void
-BobFree(BobInterpreter *c, void *p)
-{
-    unsigned long *p1       = (unsigned long *) p;
+void BobFree(BobInterpreter *c, void *p) {
+    unsigned long *p1 = (unsigned long *) p;
     unsigned long totalSize = *--p1;
     if (c) {
         c->totalMemory -= totalSize;
@@ -566,8 +656,6 @@ BobFree(BobInterpreter *c, void *p)
 }
 
 /* BobInsufficientMemory - report an insufficient memory error */
-void
-BobInsufficientMemory(BobInterpreter *c)
-{
+void BobInsufficientMemory(BobInterpreter *c) {
     BobCallErrorHandler(c, BobErrInsufficientMemory, 0);
 }

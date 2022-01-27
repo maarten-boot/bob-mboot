@@ -79,8 +79,7 @@ define testVector()
     }
 
     // as you can see locals in a block hide locals in the outer block or globals
-    stdout.Display(pp, " ", x, "\n");
-
+    stdout.Display(x, "\n"); //Error: Unbound variable - pp
 
     bb = new Object;
     bb.x = 99;

@@ -12,119 +12,93 @@
 #include "bobcom.h"
 
 /* method handlers */
-static BobValue
-BIF_Load(BobInterpreter *c);
+static BobValue BIF_Load(BobInterpreter *c);
 
-static BobValue
-BIF_Eval(BobInterpreter *c);
+static BobValue BIF_Eval(BobInterpreter *c);
 
-static BobValue
-BIF_CompileFile(BobInterpreter *c);
+static BobValue BIF_CompileFile(BobInterpreter *c);
 
 /* function table */
-static BobCMethod functionTable[] = {
-        BobMethodEntry("Load", BIF_Load),
-        BobMethodEntry("Eval", BIF_Eval),
-        BobMethodEntry("CompileFile", BIF_CompileFile),
-        BobMethodEntry(0, 0)
-};
+static BobCMethod functionTable[] = {BobMethodEntry("Load", BIF_Load), BobMethodEntry("Eval", BIF_Eval),
+                                     BobMethodEntry("CompileFile", BIF_CompileFile), BobMethodEntry(0, 0)};
 
 /* BobUseEval - enter the built-in functions and symbols for eval */
-void
-BobUseEval(BobInterpreter *c, void *buf, size_t size)
-{ F_ENTER;
+void BobUseEval(BobInterpreter *c) {
     BobCMethod *method;
 
-    /* 256 is the size of the literal buffer */
     /* create a compiler context */
-    if ((c->compiler = BobMakeCompiler(c, buf, size, 256)) == NULL) {
+    if ((c->compiler = BobMakeCompiler(c, 4096, 256)) == NULL) {
         BobInsufficientMemory(c);
     }
 
     /* enter the eval functions */
     for (method = functionTable; method->name != 0; ++method) {
-        BobEnterFunction(c, method);
+        BobEnterFunction(BobGlobalScope(c), method);
+    }
+}
+
+/* BobUnuseEval - finish using eval */
+void BobUnuseEval(BobInterpreter *c) {
+    if (c->compiler) {
+        BobFreeCompiler((BobCompiler *) c->compiler);
+        c->compiler = NULL;
     }
 }
 
 /* BIF_Load - built-in function 'Load' */
-static BobValue
-BIF_Load(BobInterpreter *c)
-{ F_ENTER;
+static BobValue BIF_Load(BobInterpreter *c) {
     BobStream *s = NULL;
-    char      *name;
-
+    char *name;
     BobParseArguments(c, "**S|P?=", &name, &s, BobFileDispatch);
-
-    return BobLoadFile(c, name, s) ? c->trueValue : c->falseValue;
+    return BobLoadFile(BobCurrentScope(c), name, s) ? c->trueValue : c->falseValue;
 }
 
 /* BIF_Eval - built-in function 'Eval' */
-static BobValue
-BIF_Eval(BobInterpreter *c)
-{ F_ENTER;
+static BobValue BIF_Eval(BobInterpreter *c) {
     char *str;
-
     BobCheckArgCnt(c, 3);
     BobCheckType(c, 3, BobStringP);
-
     str = (char *) BobStringAddress(BobGetArg(c, 3));
-
-    return BobEvalString(c, str);
+    return BobEvalString(BobCurrentScope(c), str);
 }
 
 /* BIF_CompileFile - built-in function 'CompileFile' */
-static BobValue
-BIF_CompileFile(BobInterpreter *c)
-{ F_ENTER;
-    char *iname;
-    char *oname;
-
+static BobValue BIF_CompileFile(BobInterpreter *c) {
+    char *iname, *oname;
     BobCheckArgCnt(c, 4);
     BobCheckType(c, 3, BobStringP);
     BobCheckType(c, 4, BobStringP);
-
     iname = (char *) BobStringAddress(BobGetArg(c, 3));
     oname = (char *) BobStringAddress(BobGetArg(c, 4));
-
-    return BobCompileFile(c, iname, oname) ? c->trueValue : c->falseValue;
+    return BobCompileFile(BobCurrentScope(c), iname, oname) ? c->trueValue : c->falseValue;
 }
 
 /* BobEvalString - evaluate a string */
-BobValue
-BobEvalString(BobInterpreter *c, char *str)
-{ F_ENTER;
-    BobStream *s = BobMakeStringStream(c, (unsigned char *) str, strlen(str));
-
+BobValue BobEvalString(BobScope *scope, char *str) {
+    BobStream *s = BobMakeStringStream(scope->c, (unsigned char *) str, strlen(str));
     if (s) {
-        BobValue value = BobEvalStream(c, s);
+        BobValue value = BobEvalStream(scope, s);
         BobCloseStream(s);
         return value;
-    }
-    else {
-        return c->falseValue;
+    } else {
+        return scope->c->falseValue;
     }
 }
 
 /* BobEvalStream - evaluate a stream */
-BobValue
-BobEvalStream(BobInterpreter *c, BobStream *s)
-{ F_ENTER;
+BobValue BobEvalStream(BobScope *scope, BobStream *s) {
     BobValue val;
-
-    BobInitScanner(c->compiler, s);
-    val = BobCompileExpr(c);
-
-    return val ? BobCallFunction(c, val, 0) : NULL;
+    BobInitScanner(scope->c->compiler, s);
+    val = BobCompileExpr(scope);
+    return val ? BobCallFunction(scope, val, 0) : NULL;
 }
 
 /* BobLoadFile - read and evaluate expressions from a file */
-int
-BobLoadFile(BobInterpreter *c, char *fname, BobStream *os)
-{ F_ENTER;
+int BobLoadFile(BobScope *scope, char *fname, BobStream *os) {
+    BobInterpreter *c = scope->c;
     BobUnwindTarget target;
-    BobStream       *is;
-    int             sts;
+    BobStream *is;
+    int sts;
 
     /* open the source file */
     if ((is = BobOpenFileStream(c, fname, "r")) == NULL) {
@@ -139,33 +113,29 @@ BobLoadFile(BobInterpreter *c, char *fname, BobStream *os)
     }
 
     /* announce the file */
-    if (os && c -> verbose ) {
+    if (os) {
         BobStreamPutS("Loading '", os);
         BobStreamPutS(fname, os);
         BobStreamPutS("'\n", os);
     }
 
     /* load the source file */
-    BobLoadStream(c, is, os);
+    BobLoadStream(scope, is, os);
 
     /* return successfully */
     BobPopUnwindTarget(c);
     BobCloseStream(is);
-
     return TRUE;
 }
 
 /* BobLoadStream - read and evaluate a stream of expressions */
-void
-BobLoadStream(BobInterpreter *c, BobStream *is, BobStream *os)
-{ F_ENTER;
+void BobLoadStream(BobScope *scope, BobStream *is, BobStream *os) {
+    BobInterpreter *c = scope->c;
     BobValue expr;
-
     BobInitScanner(c->compiler, is);
 
-    while ((expr = BobCompileExpr(c)) != NULL) {
-        BobValue val = BobCallFunction(c, expr, 0);
-
+    while ((expr = BobCompileExpr(scope)) != NULL) {
+        BobValue val = BobCallFunction(scope, expr, 0);
         if (os) {
             BobPrint(c, val, os);
             BobStreamPutC('\n', os);

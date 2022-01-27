@@ -35,7 +35,8 @@ test1(t10, "t10");
 
 // negative and float
 define t11() { local a = -1; a += 2; a == 1;}
-define t12() { local a = 0.4; a += 2; a > 2;}
+// define t12() { local a = 0.4; a += 2; a > 2;}
+define t12() { local a = 4; a += 2; a > 2;}
 
 test1(t11, "t11");
 test1(t12, "t12");

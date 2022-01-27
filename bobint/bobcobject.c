@@ -13,50 +13,32 @@
 #define SetCObjectNext(o, v)             (((BobCObject *)o)->next = (v))
 
 /* CObject handlers */
-static int
-GetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
+static int GetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue);
 
-static int
-SetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
+static int SetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value);
 
-static BobValue
-CObjectNewInstance(BobInterpreter *c, BobValue parent);
+static BobValue CObjectNewInstance(BobInterpreter *c, BobValue parent);
 
-static BobValue
-CPtrObjectNewInstance(BobInterpreter *c, BobValue parent);
+static BobValue CPtrObjectNewInstance(BobInterpreter *c, BobValue parent);
 
-static long
-CObjectSize(BobValue obj);
+static long CObjectSize(BobValue obj);
 
-static void
-CObjectScan(BobInterpreter *c, BobValue obj);
+static void CObjectScan(BobInterpreter *c, BobValue obj);
 
 /* CObject dispatch */
 BobDispatch BobCObjectDispatch = {
-        "CObject",
-        &BobObjectDispatch,
-        GetCObjectProperty,
-        SetCObjectProperty,
-        CObjectNewInstance,
-        BobDefaultPrint,
-        CObjectSize,
-        BobDefaultCopy,
-        CObjectScan,
-        BobDefaultHash
+        "CObject", &BobObjectDispatch, GetCObjectProperty, SetCObjectProperty, CObjectNewInstance, BobDefaultPrint,
+        CObjectSize, BobDefaultCopy, CObjectScan, BobDefaultHash
 };
 
 /* BobCObjectP - is this value a cobject? */
-int
-BobCObjectP(BobValue val)
-{
+int BobCObjectP(BobValue val) {
     BobDispatch *d = BobGetDispatch(val);
     return d->size == CObjectSize;
 }
 
 /* GetCObjectProperty - CObject get property handler */
-static int
-GetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue)
-{
+static int GetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pValue) {
     BobValue p;
 
     /* look for a local property */
@@ -78,12 +60,10 @@ GetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pVal
                     if (method->getHandler) {
                         *pValue = (*method->getHandler)(c, obj);
                         return TRUE;
-                    }
-                    else {
+                    } else {
                         BobCallErrorHandler(c, BobErrWriteOnlyProperty, tag);
                     }
-                }
-                else {
+                } else {
                     *pValue = propValue;
                     return TRUE;
                 }
@@ -96,11 +76,9 @@ GetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue *pVal
 }
 
 /* SetCObjectProperty - CObject set property handler */
-static int
-SetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value)
-{
+static int SetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value) {
     BobIntegerType hashValue, i;
-    BobValue       p;
+    BobValue p;
 
     /* look for a local property */
     if ((p = BobFindProperty(c, obj, tag, &hashValue, &i)) != NULL) {
@@ -121,12 +99,10 @@ SetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value
                     if (method->setHandler) {
                         (*method->setHandler)(c, obj, value);
                         return TRUE;
-                    }
-                    else {
+                    } else {
                         BobCallErrorHandler(c, BobErrReadOnlyProperty, tag);
                     }
-                }
-                else {
+                } else {
                     BobAddProperty(c, obj, tag, value, hashValue, i);
                     return TRUE;
                 }
@@ -140,35 +116,27 @@ SetCObjectProperty(BobInterpreter *c, BobValue obj, BobValue tag, BobValue value
 }
 
 /* CObjectNewInstance - CObject new instance handler */
-static BobValue
-CObjectNewInstance(BobInterpreter *c, BobValue parent)
-{
+static BobValue CObjectNewInstance(BobInterpreter *c, BobValue parent) {
     BobDispatch *d = (BobDispatch *) BobCObjectValue(parent);
     return BobMakeCObject(c, d);
 }
 
 /* CPtrObjectNewInstance - CPtrObject new instance handler */
-static BobValue
-CPtrObjectNewInstance(BobInterpreter *c, BobValue parent)
-{
-    BobDispatch *d  = (BobDispatch *) BobCObjectValue(parent);
-    BobValue    obj = BobMakeCObject(c, d);
+static BobValue CPtrObjectNewInstance(BobInterpreter *c, BobValue parent) {
+    BobDispatch *d = (BobDispatch *) BobCObjectValue(parent);
+    BobValue obj = BobMakeCObject(c, d);
     BobSetCObjectValue(obj, NULL);
     return obj;
 }
 
 /* CObjectSize - CObject size handler */
-static long
-CObjectSize(BobValue obj)
-{
+static long CObjectSize(BobValue obj) {
     BobDispatch *d = BobQuickGetDispatch(obj);
     return sizeof(BobCObject) + d->dataSize;
 }
 
 /* CObjectScan - CObject scan handler */
-static void
-CObjectScan(BobInterpreter *c, BobValue obj)
-{
+static void CObjectScan(BobInterpreter *c, BobValue obj) {
     SetCObjectNext(obj, c->newSpace->cObjects);
     c->newSpace->cObjects = obj;
     BobObjectDispatch.scan(c, obj);
@@ -176,17 +144,15 @@ CObjectScan(BobInterpreter *c, BobValue obj)
 
 /* BobMakeCObjectType - make a new cobject type */
 BobDispatch *
-BobMakeCObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties, long size
-)
-{
+BobMakeCObjectType(BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties,
+                   long size) {
     BobDispatch *d;
 
     /* make and initialize the type dispatch structure */
     if (!(d = BobMakeDispatch(c, typeName, &BobCObjectDispatch))) {
         return NULL;
     }
-    d->parent   = parent;
+    d->parent = parent;
     d->dataSize = size;
 
     /* make the type object */
@@ -200,13 +166,10 @@ BobMakeCObjectType(
 }
 
 /* BobMakeCPtrObjectType - make a new cobject type */
-BobDispatch *
-BobMakeCPtrObjectType(
-        BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods, BobVPMethod *properties
-)
-{
-    BobDispatch *d = BobMakeCObjectType(
-            c, parent, typeName, methods, properties, sizeof(BobCPtrObject) - sizeof(BobCObject));
+BobDispatch *BobMakeCPtrObjectType(BobInterpreter *c, BobDispatch *parent, char *typeName, BobCMethod *methods,
+                                   BobVPMethod *properties) {
+    BobDispatch *d = BobMakeCObjectType(c, parent, typeName, methods, properties,
+                                        sizeof(BobCPtrObject) - sizeof(BobCObject));
     if (d) {
         d->newInstance = CPtrObjectNewInstance;
     }
@@ -214,9 +177,7 @@ BobMakeCPtrObjectType(
 }
 
 /* BobEnterCObjectMethods - add methods and properties to a cobject type */
-void
-BobEnterCObjectMethods(BobInterpreter *c, BobDispatch *d, BobCMethod *methods, BobVPMethod *properties)
-{
+void BobEnterCObjectMethods(BobInterpreter *c, BobDispatch *d, BobCMethod *methods, BobVPMethod *properties) {
     /* enter the methods */
     if (methods) {
         BobEnterMethods(c, d->object, methods);
@@ -229,9 +190,7 @@ BobEnterCObjectMethods(BobInterpreter *c, BobDispatch *d, BobCMethod *methods, B
 }
 
 /* BobMakeCObject - make a new cobject value */
-BobValue
-BobMakeCObject(BobInterpreter *c, BobDispatch *d)
-{
+BobValue BobMakeCObject(BobInterpreter *c, BobDispatch *d) {
     BobValue new;
     new = BobAllocate(c, sizeof(BobCObject) + d->dataSize);
     BobSetDispatch(new, d);
@@ -244,18 +203,14 @@ BobMakeCObject(BobInterpreter *c, BobDispatch *d)
 }
 
 /* BobMakeCPtrObject - make a new pointer cobject value */
-BobValue
-BobMakeCPtrObject(BobInterpreter *c, BobDispatch *d, void *ptr)
-{
+BobValue BobMakeCPtrObject(BobInterpreter *c, BobDispatch *d, void *ptr) {
     BobValue new = BobMakeCObject(c, d);
     BobSetCObjectValue(new, ptr);
     return new;
 }
 
 /* BobDestroyUnreachableCObjects - destroy unreachable cobjects */
-void
-BobDestroyUnreachableCObjects(BobInterpreter *c)
-{
+void BobDestroyUnreachableCObjects(BobInterpreter *c) {
     BobValue obj = c->oldSpace->cObjects;
     while (obj != NULL) {
         if (!BobBrokenHeartP(obj)) {
@@ -273,9 +228,7 @@ BobDestroyUnreachableCObjects(BobInterpreter *c)
 }
 
 /* BobDestroyAllCObjects - destroy all cobjects */
-void
-BobDestroyAllCObjects(BobInterpreter *c)
-{
+void BobDestroyAllCObjects(BobInterpreter *c) {
     BobValue obj = c->newSpace->cObjects;
     while (obj != NULL) {
         if (!BobBrokenHeartP(obj)) {
@@ -300,56 +253,36 @@ BobDestroyAllCObjects(BobInterpreter *c)
 #define SetVPMethodSetHandler(o, v)       (((BobVPMethod *)o)->setHandler = (v))
 
 /* VPMethod handlers */
-static int
-VPMethodPrint(BobInterpreter *c, BobValue val, BobStream *s);
+static int VPMethodPrint(BobInterpreter *c, BobValue val, BobStream *s);
 
-static long
-VPMethodSize(BobValue obj);
+static long VPMethodSize(BobValue obj);
 
-static BobValue
-VPMethodCopy(BobInterpreter *c, BobValue obj);
+static BobValue VPMethodCopy(BobInterpreter *c, BobValue obj);
 
 /* VPMethod dispatch */
 BobDispatch BobVPMethodDispatch = {
-        "VPMethod",
-        &BobVPMethodDispatch,
-        BobDefaultGetProperty,
-        BobDefaultSetProperty,
-        BobDefaultNewInstance,
-        VPMethodPrint,
-        VPMethodSize,
-        VPMethodCopy,
-        BobDefaultScan,
-        BobDefaultHash
+        "VPMethod", &BobVPMethodDispatch, BobDefaultGetProperty, BobDefaultSetProperty, BobDefaultNewInstance,
+        VPMethodPrint, VPMethodSize, VPMethodCopy, BobDefaultScan, BobDefaultHash
 };
 
 /* VPMethodPrint - VPMethod print handler */
-static int
-VPMethodPrint(BobInterpreter *c, BobValue val, BobStream *s)
-{
-    return BobStreamPutS("<VPMethod-", s) == 0
-           && BobStreamPutS(BobVPMethodName(val), s) == 0
-           && BobStreamPutC('>', s) == '>';
+static int VPMethodPrint(BobInterpreter *c, BobValue val, BobStream *s) {
+    return BobStreamPutS("<VPMethod-", s) == 0 && BobStreamPutS(BobVPMethodName(val), s) == 0 &&
+           BobStreamPutC('>', s) == '>';
 }
 
 /* VPMethodSize - VPMethod size handler */
-static long
-VPMethodSize(BobValue obj)
-{
+static long VPMethodSize(BobValue obj) {
     return sizeof(BobVPMethod);
 }
 
 /* VPMethodCopy - VPMethod copy handler */
-static BobValue
-VPMethodCopy(BobInterpreter *c, BobValue obj)
-{
+static BobValue VPMethodCopy(BobInterpreter *c, BobValue obj) {
     return obj;
 }
 
 /* BobMakeVPMethod - make a new c method value */
-BobValue
-BobMakeVPMethod(BobInterpreter *c, char *name, BobVPGetHandler getHandler, BobVPSetHandler setHandler)
-{
+BobValue BobMakeVPMethod(BobInterpreter *c, char *name, BobVPGetHandler getHandler, BobVPSetHandler setHandler) {
     BobValue new;
     new = BobAllocate(c, sizeof(BobVPMethod));
     BobSetDispatch(new, &BobVPMethodDispatch);
@@ -360,9 +293,7 @@ BobMakeVPMethod(BobInterpreter *c, char *name, BobVPGetHandler getHandler, BobVP
 }
 
 /* BobGetVirtualProperty - get a property value that might be virtual */
-int
-BobGetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue *pValue)
-{
+int BobGetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue *pValue) {
     BobValue p;
     if ((p = BobFindProperty(c, parent, tag, NULL, NULL)) != NULL) {
         BobValue propValue = BobPropertyValue(p);
@@ -371,12 +302,10 @@ BobGetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue
             if (method->getHandler) {
                 *pValue = (*method->getHandler)(c, obj);
                 return TRUE;
-            }
-            else {
+            } else {
                 BobCallErrorHandler(c, BobErrWriteOnlyProperty, tag);
             }
-        }
-        else {
+        } else {
             *pValue = propValue;
             return TRUE;
         }
@@ -385,11 +314,9 @@ BobGetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue
 }
 
 /* BobSetVirtualProperty - set a property value that might be virtual */
-int
-BobSetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue value)
-{
+int BobSetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue tag, BobValue value) {
     BobIntegerType hashValue, i;
-    BobValue       p;
+    BobValue p;
     if ((p = BobFindProperty(c, parent, tag, &hashValue, &i)) != NULL) {
         BobValue propValue = BobPropertyValue(p);
         if (BobVPMethodP(propValue)) {
@@ -397,8 +324,7 @@ BobSetVirtualProperty(BobInterpreter *c, BobValue obj, BobValue parent, BobValue
             if (method->setHandler) {
                 (*method->setHandler)(c, obj, value);
                 return TRUE;
-            }
-            else {
+            } else {
                 BobCallErrorHandler(c, BobErrReadOnlyProperty, tag);
             }
         }

@@ -1,3 +1,1 @@
 test_block.bob
-Loading './test_block.bob'
-nil

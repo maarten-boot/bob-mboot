@@ -7,51 +7,36 @@
 #include "bob.h"
 
 /* prototypes */
-static int
-ReadMethod(BobInterpreter *c, BobValue *pMethod, BobStream *s);
+static int ReadMethod(BobScope *scope, BobValue *pMethod, BobStream *s);
 
-static int
-ReadValue(BobInterpreter *c, BobValue *pv, BobStream *s);
+static int ReadValue(BobScope *scope, BobValue *pv, BobStream *s);
 
-static int
-ReadCodeValue(BobInterpreter *c, BobValue *pv, BobStream *s);
+static int ReadCodeValue(BobScope *scope, BobValue *pv, BobStream *s);
 
-static int
-ReadVectorValue(BobInterpreter *c, BobValue *pv, BobStream *s);
+static int ReadVectorValue(BobScope *scope, BobValue *pv, BobStream *s);
 
-static int
-ReadObjectValue(BobInterpreter *c, BobValue *pv, BobStream *s);
+static int ReadObjectValue(BobScope *scope, BobValue *pv, BobStream *s);
 
-static int
-ReadSymbolValue(BobInterpreter *c, BobValue *pv, BobStream *s);
+static int ReadSymbolValue(BobInterpreter *c, BobValue *pv, BobStream *s);
 
-static int
-ReadStringValue(BobInterpreter *c, BobValue *pv, BobStream *s);
+static int ReadStringValue(BobInterpreter *c, BobValue *pv, BobStream *s);
 
-static int
-ReadIntegerValue(BobInterpreter *c, BobValue *pv, BobStream *s);
+static int ReadIntegerValue(BobInterpreter *c, BobValue *pv, BobStream *s);
 
-static int
-ReadInteger(BobIntegerType *pn, BobStream *s);
+static int ReadInteger(BobIntegerType *pn, BobStream *s);
 
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-
-static int
-ReadFloatValue(BobInterpreter *c, BobValue *pv, BobStream *s);
-
-static int
-ReadFloat(BobFloatType *pn, BobStream *s);
-
+static int ReadFloatValue(BobInterpreter *c,BobValue *pv,BobStream *s);
+static int ReadFloat(BobFloatType *pn,BobStream *s);
 #endif
 
 /* BobLoadObjectFile - load an object file */
-int
-BobLoadObjectFile(BobInterpreter *c, char *fname, BobStream *os)
-{
+int BobLoadObjectFile(BobScope *scope, char *fname, BobStream *os) {
+    BobInterpreter *c = scope->c;
     BobUnwindTarget target;
-    BobIntegerType  version;
-    BobValue        method;
-    BobStream       *s;
+    BobIntegerType version;
+    BobValue method;
+    BobStream *s;
 
     /* open the object file */
     if ((s = BobOpenFileStream(c, fname, "rb")) == NULL) {
@@ -59,10 +44,7 @@ BobLoadObjectFile(BobInterpreter *c, char *fname, BobStream *os)
     }
 
     /* check the file type */
-    if (BobStreamGetC(s) != 'B'
-        || BobStreamGetC(s) != 'O'
-        || BobStreamGetC(s) != 'B'
-        || BobStreamGetC(s) != 'O') {
+    if (BobStreamGetC(s) != 'B' || BobStreamGetC(s) != 'O' || BobStreamGetC(s) != 'B' || BobStreamGetC(s) != 'O') {
         BobCloseStream(s);
         BobCallErrorHandler(c, BobErrNotAnObjectFile, fname);
     }
@@ -89,8 +71,8 @@ BobLoadObjectFile(BobInterpreter *c, char *fname, BobStream *os)
     }
 
     /* read and evaluate each expression (thunk) */
-    while (ReadMethod(c, &method, s)) {
-        BobValue val = BobCallFunction(c, method, 0);
+    while (ReadMethod(scope, &method, s)) {
+        BobValue val = BobCallFunction(scope, method, 0);
         if (os) {
             BobPrint(c, val, os);
             BobStreamPutC('\n', os);
@@ -104,11 +86,10 @@ BobLoadObjectFile(BobInterpreter *c, char *fname, BobStream *os)
 }
 
 /* BobLoadObjectStream - load a stream of object code */
-int
-BobLoadObjectStream(BobInterpreter *c, BobStream *s, BobStream *os)
-{
+int BobLoadObjectStream(BobScope *scope, BobStream *s, BobStream *os) {
+    BobInterpreter *c = scope->c;
     BobUnwindTarget target;
-    BobValue        method;
+    BobValue method;
 
     /* setup the unwind target */
     BobPushUnwindTarget(c, &target);
@@ -118,8 +99,8 @@ BobLoadObjectStream(BobInterpreter *c, BobStream *s, BobStream *os)
     }
 
     /* read and evaluate each expression (thunk) */
-    while (ReadMethod(c, &method, s)) {
-        BobValue val = BobCallFunction(c, method, 0);
+    while (ReadMethod(scope, &method, s)) {
+        BobValue val = BobCallFunction(scope, method, 0);
         if (os) {
             BobPrint(c, val, os);
             BobStreamPutC('\n', os);
@@ -132,51 +113,47 @@ BobLoadObjectStream(BobInterpreter *c, BobStream *s, BobStream *os)
 }
 
 /* ReadMethod - read a method from a fasl file */
-static int
-ReadMethod(BobInterpreter *c, BobValue *pMethod, BobStream *s)
-{
+static int ReadMethod(BobScope *scope, BobValue *pMethod, BobStream *s) {
+    BobInterpreter *c = scope->c;
     BobValue code;
-    if (BobStreamGetC(s) != BobFaslTagCode
-        || !ReadCodeValue(c, &code, s)) {
+    if (BobStreamGetC(s) != BobFaslTagCode || !ReadCodeValue(scope, &code, s)) {
         return FALSE;
     }
-    *pMethod = BobMakeMethod(c, code, c->nilValue);
+    *pMethod = BobMakeMethod(c, code, c->nilValue, scope->globals);
     return TRUE;
 }
 
 /* ReadValue - read a value */
-static int
-ReadValue(BobInterpreter *c, BobValue *pv, BobStream *s)
-{
+static int ReadValue(BobScope *scope, BobValue *pv, BobStream *s) {
+    BobInterpreter *c = scope->c;
     switch (BobStreamGetC(s)) {
-    case BobFaslTagNil:
-        *pv = c->nilValue;
-        return TRUE;
-    case BobFaslTagCode:
-        return ReadCodeValue(c, pv, s);
-    case BobFaslTagVector:
-        return ReadVectorValue(c, pv, s);
-    case BobFaslTagObject:
-        return ReadObjectValue(c, pv, s);
-    case BobFaslTagSymbol:
-        return ReadSymbolValue(c, pv, s);
-    case BobFaslTagString:
-        return ReadStringValue(c, pv, s);
-    case BobFaslTagInteger:
-        return ReadIntegerValue(c, pv, s);
+        case BobFaslTagNil:
+            *pv = c->nilValue;
+            return TRUE;
+        case BobFaslTagCode:
+            return ReadCodeValue(scope, pv, s);
+        case BobFaslTagVector:
+            return ReadVectorValue(scope, pv, s);
+        case BobFaslTagObject:
+            return ReadObjectValue(scope, pv, s);
+        case BobFaslTagSymbol:
+            return ReadSymbolValue(c, pv, s);
+        case BobFaslTagString:
+            return ReadStringValue(c, pv, s);
+        case BobFaslTagInteger:
+            return ReadIntegerValue(c, pv, s);
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-    case BobFaslTagFloat:
-        return ReadFloatValue(c, pv, s);
+            case BobFaslTagFloat:
+                return ReadFloatValue(c,pv,s);
 #endif
-    default:
-        return FALSE;
+        default:
+            return FALSE;
     }
 }
 
 /* ReadCodeValue - read a code value */
-static int
-ReadCodeValue(BobInterpreter *c, BobValue *pv, BobStream *s)
-{
+static int ReadCodeValue(BobScope *scope, BobValue *pv, BobStream *s) {
+    BobInterpreter *c = scope->c;
     BobIntegerType size, i;
     if (!ReadInteger(&size, s)) {
         return FALSE;
@@ -184,7 +161,7 @@ ReadCodeValue(BobInterpreter *c, BobValue *pv, BobStream *s)
     BobCPush(c, BobMakeBasicVector(c, &BobCompiledCodeDispatch, size));
     for (i = 0; i < size; ++i) {
         BobValue v;
-        if (!ReadValue(c, &v, s)) {
+        if (!ReadValue(scope, &v, s)) {
             BobDrop(c, 1);
             return FALSE;
         }
@@ -195,9 +172,8 @@ ReadCodeValue(BobInterpreter *c, BobValue *pv, BobStream *s)
 }
 
 /* ReadVectorValue - read a vector value */
-static int
-ReadVectorValue(BobInterpreter *c, BobValue *pv, BobStream *s)
-{
+static int ReadVectorValue(BobScope *scope, BobValue *pv, BobStream *s) {
+    BobInterpreter *c = scope->c;
     BobIntegerType size, i;
     if (!ReadInteger(&size, s)) {
         return FALSE;
@@ -205,7 +181,7 @@ ReadVectorValue(BobInterpreter *c, BobValue *pv, BobStream *s)
     BobCPush(c, BobMakeVector(c, size));
     for (i = 0; i < size; ++i) {
         BobValue v;
-        if (!ReadValue(c, &v, s)) {
+        if (!ReadValue(scope, &v, s)) {
             BobDrop(c, 1);
             return FALSE;
         }
@@ -216,31 +192,30 @@ ReadVectorValue(BobInterpreter *c, BobValue *pv, BobStream *s)
 }
 
 /* ReadObjectValue - read an object value */
-static int
-ReadObjectValue(BobInterpreter *c, BobValue *pv, BobStream *s)
-{
-    BobValue       classSymbol, class;
+static int ReadObjectValue(BobScope *scope, BobValue *pv, BobStream *s) {
+    BobInterpreter *c = scope->c;
+    BobValue classSymbol, class;
     BobIntegerType size;
-    if (!ReadValue(c, &classSymbol, s)
-        || !ReadInteger(&size, s)) {
+    if (!ReadValue(scope, &classSymbol, s) || !ReadInteger(&size, s)) {
         return FALSE;
     }
     if (BobSymbolP(classSymbol)) {
-        class = BobGlobalValue(classSymbol);
-    }
-    else {
+        if (!BobGlobalValue(scope, classSymbol, &class)) {
+            return FALSE;
+        }
+    } else {
         class = c->nilValue;
     }
     BobCheck(c, 2);
     BobPush(c, BobMakeObject(c, class));
     while (--size >= 0) {
         BobValue tag, value;
-        if (!ReadValue(c, &tag, s)) {
+        if (!ReadValue(scope, &tag, s)) {
             BobDrop(c, 1);
             return FALSE;
         }
         BobPush(c, tag);
-        if (!ReadValue(c, &value, s)) {
+        if (!ReadValue(scope, &value, s)) {
             BobDrop(c, 2);
             return FALSE;
         }
@@ -252,9 +227,7 @@ ReadObjectValue(BobInterpreter *c, BobValue *pv, BobStream *s)
 }
 
 /* ReadSymbolValue - read a symbol value */
-static int
-ReadSymbolValue(BobInterpreter *c, BobValue *pv, BobStream *s)
-{
+static int ReadSymbolValue(BobInterpreter *c, BobValue *pv, BobStream *s) {
     BobValue name;
     if (!ReadStringValue(c, &name, s)) {
         return FALSE;
@@ -264,11 +237,9 @@ ReadSymbolValue(BobInterpreter *c, BobValue *pv, BobStream *s)
 }
 
 /* ReadStringValue - read a string value */
-static int
-ReadStringValue(BobInterpreter *c, BobValue *pv, BobStream *s)
-{
+static int ReadStringValue(BobInterpreter *c, BobValue *pv, BobStream *s) {
     BobIntegerType size;
-    unsigned char  *p;
+    unsigned char *p;
     if (!ReadInteger(&size, s)) {
         return FALSE;
     }
@@ -284,9 +255,7 @@ ReadStringValue(BobInterpreter *c, BobValue *pv, BobStream *s)
 }
 
 /* ReadIntegerValue - read an integer value */
-static int
-ReadIntegerValue(BobInterpreter *c, BobValue *pv, BobStream *s)
-{
+static int ReadIntegerValue(BobInterpreter *c, BobValue *pv, BobStream *s) {
     BobIntegerType n;
     if (!ReadInteger(&n, s)) {
         return FALSE;
@@ -297,24 +266,18 @@ ReadIntegerValue(BobInterpreter *c, BobValue *pv, BobStream *s)
 
 /* ReadFloatValue - read a float value */
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-
-static int
-ReadFloatValue(BobInterpreter *c, BobValue *pv, BobStream *s)
+static int ReadFloatValue(BobInterpreter *c,BobValue *pv,BobStream *s)
 {
     BobFloatType n;
-    if (!ReadFloat(&n, s)) {
+    if (!ReadFloat(&n,s))
         return FALSE;
-    }
-    *pv = BobMakeFloat(c, n);
+    *pv = BobMakeFloat(c,n);
     return TRUE;
 }
-
 #endif
 
 /* ReadInteger - read an integer value from an image file */
-static int
-ReadInteger(BobIntegerType *pn, BobStream *s)
-{
+static int ReadInteger(BobIntegerType *pn, BobStream *s) {
     int c;
     if ((c = BobStreamGetC(s)) == BobStreamEOF) {
         return FALSE;
@@ -337,9 +300,7 @@ ReadInteger(BobIntegerType *pn, BobStream *s)
 
 /* ReadFloat - read a float value from an image file */
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-
-static int
-ReadFloat(BobFloatType *pn, BobStream *s)
+static int ReadFloat(BobFloatType *pn,BobStream *s)
 {
     int count = sizeof(BobFloatType);
 #ifdef BOB_REVERSE_FLOATS_ON_READ
@@ -351,17 +312,15 @@ ReadFloat(BobFloatType *pn, BobStream *s)
         *--p = c;
     }
 #else
-    char *p = (char *) pn;
-    int  c;
+    char *p = (char *)pn;
+    int c;
     while (--count >= 0) {
-        if ((c = BobStreamGetC(s)) == BobStreamEOF) {
+        if ((c = BobStreamGetC(s)) == BobStreamEOF)
             return FALSE;
-        }
         *p++ = c;
     }
 #endif
     return TRUE;
 }
-
 #endif
 

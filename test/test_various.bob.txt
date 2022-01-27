@@ -1,13 +1,4 @@
 test_various.bob
-Loading './test_various.bob'
-<Method-while_continue>
-<Method-for_continue>
-<Method-fibo_generator>
-<Method-test_fibo>
-<Method-testVector>
-<Method-funcReturningInt1>
-<Method-funcReturningInt2>
-<Method-main>
 0
 1
 2
@@ -60,8 +51,8 @@ fibo1 6765
 
  test vector 
 6 8
-nil 1
-<Object-004e8328>
+1
+<Object-7f982b77ec6c>
 99
 999
 abcdefg 101 102
@@ -70,7 +61,6 @@ a
 zyxwvu 102 117 a
 5
 5
-obj1<Object-004e83f8>
-obj2<Object-004e8480>
-obj3<Object-004e84a0>
-"end"
+obj1<Object-7f982b77ee04>
+obj2<Object-7f982b77eeb4>
+obj3<Object-7f982b77eef4>

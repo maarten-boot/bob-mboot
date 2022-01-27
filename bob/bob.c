@@ -12,99 +12,62 @@
 #include "bob.h"
 #include "bobcom.h"
 
-#if 1
-
-#define INTERPRETER_SIZE    (1024 * 1024)
-#define COMPILER_SIZE       (1024 * 1024)
-#define STACK_SIZE          (64 * 1024)
-
-#else
-
-#define INTERPRETER_SIZE    (20 * 1024)
-#define COMPILER_SIZE       (8 * 1024)
-#define STACK_SIZE          (2 * 1024)
-
-#endif
+#define HEAP_SIZE   (1024 * 1024)
+#define EXPAND_SIZE (512 * 1024)
+#define STACK_SIZE  (64 * 1025)
 
 /* console stream structure */
-typedef struct
-{
+typedef struct {
     BobStreamDispatch *d;
 } ConsoleStream;
 
 /* CloseConsoleStream - console stream close handler */
-static int
-CloseConsoleStream(BobStream *s)
-{
+static int CloseConsoleStream(BobStream *s) {
     return 0;
 }
 
 /* ConsoleStreamGetC - console stream getc handler */
-static int
-ConsoleStreamGetC(BobStream *s)
-{
+static int ConsoleStreamGetC(BobStream *s) {
     return getchar();
 }
 
 /* ConsoleStreamPutC - console stream putc handler */
-static int
-ConsoleStreamPutC(int ch, BobStream *s)
-{
+static int ConsoleStreamPutC(int ch, BobStream *s) {
     return putchar(ch);
 }
 
 /* dispatch structure for null streams */
 BobStreamDispatch consoleDispatch = {
-        CloseConsoleStream,
-        ConsoleStreamGetC,
-        ConsoleStreamPutC
+        CloseConsoleStream, ConsoleStreamGetC, ConsoleStreamPutC
 };
 
 /* console stream */
 ConsoleStream consoleStream = {&consoleDispatch};
 
-/* space for interpreter */
-static char interpreterSpace[INTERPRETER_SIZE];
-static char compilerSpace[COMPILER_SIZE];
-
 /* prototypes */
-static void
-ErrorHandler(BobInterpreter *c, int code, va_list ap);
+static void ErrorHandler(BobInterpreter *c, int code, va_list ap);
 
-static void
-CompileFile(BobInterpreter *c, char *inputName, char *outputName);
+static void CompileFile(BobInterpreter *c, char *inputName, char *outputName);
 
-static void
-LoadFile(BobInterpreter *c, char *name, int verboseP);
+static void LoadFile(BobInterpreter *c, char *name, int verboseP);
 
-static void
-ReadEvalPrint(BobInterpreter *c);
+static void ReadEvalPrint(BobInterpreter *c);
 
-static void
-Usage(void);
+static void Usage(void);
 
 /* main - the main routine */
-int
-main(int argc, char **argv)
-{
-    F_ENTER;
-
-    int             interactiveP = TRUE;
+int main(int argc, char **argv) {
+    int interactiveP = TRUE;
     BobUnwindTarget target;
-    BobInterpreter  *c;
+    BobInterpreter *c;
 
-    /* make the workspace */
-    if ((c = BobMakeInterpreter(interpreterSpace, sizeof(interpreterSpace), STACK_SIZE)) == NULL) {
+    /* initialize the workspace */
+    if ((c = BobMakeInterpreter(HEAP_SIZE, EXPAND_SIZE, STACK_SIZE)) == NULL) {
         exit(1);
     }
 
-    /* setup standard i/o */
-    c->standardInput  = (BobStream *) &consoleStream;
-    c->standardOutput = (BobStream *) &consoleStream;
-    c->standardError  = (BobStream *) &consoleStream;
-
-    /* setup the error handler */
-    c->errorHandler = ErrorHandler;
+    /* use stdio for file i/o */
+    BobUseStandardIO(c);
 
     /* setup the error handler target */
     BobPushUnwindTarget(c, &target);
@@ -114,13 +77,13 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    /* initialize the workspace */
-    if (!BobInitInterpreter(c)) {
-        exit(1);
-    }
+    /* setup the error handler */
+    c->errorHandler = ErrorHandler;
 
-    /* use stdio for file i/o */
-    BobUseStandardIO(c);
+    /* setup standard i/o */
+    c->standardInput = (BobStream *) &consoleStream;
+    c->standardOutput = (BobStream *) &consoleStream;
+    c->standardError = (BobStream *) &consoleStream;
 
     /* add the library functions to the symbol table */
     BobEnterLibrarySymbols(c);
@@ -131,77 +94,67 @@ main(int argc, char **argv)
 #endif
 
     /* use the eval package */
-    BobUseEval(c, compilerSpace, sizeof(compilerSpace));
+    BobUseEval(c);
 
     /* catch errors and restart read/eval/print loop */
     if (BobUnwindCatch(c) == 0) {
         char *inputName, *outputName = NULL;
-        int  verboseP                = FALSE;
-        int  i;
+        int verboseP = FALSE;
+        int i;
 
         /* process arguments */
         for (i = 1; i < argc; ++i) {
             if (argv[i][0] == '-') {
                 switch (argv[i][1]) {
 
-                case '?':
-                    Usage();
-                    break;
-
-                case 'd':
-                    c -> debug = 1;
-                    c -> compiler -> debug = 1;
-                    break;
-
-                case 'c':   /* compile source file */
-                    if (argv[i][2]) {
-                        inputName = &argv[i][2];
-                    }
-                    else if (++i < argc) {
-                        inputName = argv[i];
-                    }
-                    else {
+                    case '?':
                         Usage();
-                    }
+                        break;
 
-                    CompileFile(c, inputName, outputName);
-                    interactiveP = FALSE;
-                    outputName   = NULL;
-                    break;
+                    case 'c':   /* compile source file */
+                        if (argv[i][2]) {
+                            inputName = &argv[i][2];
+                        } else if (++i < argc) {
+                            inputName = argv[i];
+                        } else {
+                            Usage();
+                        }
+                        CompileFile(c, inputName, outputName);
+                        interactiveP = FALSE;
+                        outputName = NULL;
+                        break;
 
-                case 'i':   /* enter interactive mode after loading */
-                    interactiveP = TRUE;
-                    break;
+                    case 'g':   /* emit debugging information when compiling */
+                        c->compiler->emitLineNumbersP = TRUE;
+                        break;
 
-                case 'o':   /* specify output filename when compiling */
-                    if (argv[i][2]) {
-                        outputName = &argv[i][2];
-                    }
-                    else if (++i < argc) {
-                        outputName = argv[i];
-                    }
-                    else {
+                    case 'i':   /* enter interactive mode after loading */
+                        interactiveP = TRUE;
+                        break;
+
+                    case 'o':   /* specify output filename when compiling */
+                        if (argv[i][2]) {
+                            outputName = &argv[i][2];
+                        } else if (++i < argc) {
+                            outputName = argv[i];
+                        } else {
+                            Usage();
+                        }
+                        interactiveP = FALSE;
+                        break;
+
+                    case 'v':   /* display values of expressions loaded */
+                        verboseP = TRUE;
+                        break;
+
+                    default:
                         Usage();
-                    }
-
-                    interactiveP = FALSE;
-                    break;
-
-                case 'v':   /* display values of expressions loaded */
-                    c -> verbose = 1;
-                    c -> compiler -> verbose = 1;
-                    verboseP = TRUE;
-                    break;
-
-                default:
-                    Usage();
-                    break;
+                        break;
                 }
-            }
-            else {
+            } else {
                 LoadFile(c, argv[i], verboseP);
                 interactiveP = FALSE;
-                verboseP     = FALSE;
+                verboseP = FALSE;
             }
         }
     }
@@ -219,14 +172,8 @@ main(int argc, char **argv)
 }
 
 /* CompileFile - compile a single file */
-static void
-CompileFile(BobInterpreter *c, char *inputName, char *outputName)
-{
-    F_ENTER;
-
-    char iname[1024];
-    char oname[1024];
-    char *p;
+static void CompileFile(BobInterpreter *c, char *inputName, char *outputName) {
+    char iname[1024], oname[1024], *p;
 
     /* determine the input filename */
     if ((p = strrchr(inputName, '.')) == NULL) {
@@ -243,51 +190,44 @@ CompileFile(BobInterpreter *c, char *inputName, char *outputName)
             outputName = oname;
         }
     }
-    else {
+
         /* construct an output filename */
+    else {
         if ((p = strrchr(inputName, '.')) == NULL) {
             strcpy(oname, inputName);
-        }
-        else {
+        } else {
             int len = p - inputName;
             strncpy(oname, inputName, len);
             oname[len] = '\0';
         }
-
         strcat(oname, ".bbo");
         outputName = oname;
     }
 
     /* compile the file */
     printf("Compiling '%s' -> '%s'\n", inputName, outputName);
-    BobCompileFile(c, inputName, outputName);
+    BobCompileFile(BobCurrentScope(c), inputName, outputName);
 }
 
 /* LoadFile - load a single file */
-static void
-LoadFile(BobInterpreter *c, char *name, int verboseP)
-{
-    F_ENTER;
-
+static void LoadFile(BobInterpreter *c, char *name, int verboseP) {
     BobStream *s = verboseP ? c->standardOutput : NULL;
-    char      *ext;
+    char *ext;
 
     /* default to .bob if the extension is missing */
     if ((ext = strrchr(name, '.')) == NULL) {
         char fullName[1024];
-
         sprintf(fullName, "%s.bob", name);
-        BobLoadFile(c, fullName, s);
+        BobLoadFile(BobGlobalScope(c), fullName, s);
     }
-    else {
+
         /* determine the file extension */
+    else {
         if (strcmp(ext, ".bob") == 0) {
-            BobLoadFile(c, name, s);
-        }
-        else if (strcmp(ext, ".bbo") == 0) {
-            BobLoadObjectFile(c, name, s);
-        }
-        else {
+            BobLoadFile(BobGlobalScope(c), name, s);
+        } else if (strcmp(ext, ".bbo") == 0) {
+            BobLoadObjectFile(BobGlobalScope(c), name, s);
+        } else {
             fprintf(stderr, "Unknown file extension '%s'\n", name);
             exit(1);
         }
@@ -295,76 +235,56 @@ LoadFile(BobInterpreter *c, char *name, int verboseP)
 }
 
 /* ReadEvalPrint - enter a read/eval/print loop */
-static void
-ReadEvalPrint(BobInterpreter *c)
-{
-    F_ENTER;
-
-    char     lineBuffer[256];
+static void ReadEvalPrint(BobInterpreter *c) {
+    char lineBuffer[256];
     BobValue val;
 
     /* protect a pointer from the garbage collector */
     BobProtectPointer(c, &val);
 
     for (;;) {
-
-        printf("\n> ");
+        printf("\nExpr> ");
         fflush(stdout);
-
         if (fgets(lineBuffer, sizeof(lineBuffer), stdin)) {
-            val = BobEvalString(c, lineBuffer);
-
+            val = BobEvalString(BobCurrentScope(c), lineBuffer);
             if (val) {
-                printf("--> ");
+                printf("Value: ");
                 BobPrint(c, val, c->standardOutput);
-                printf("\n");
             }
-        }
-        else {
+        } else {
             break;
         }
     }
 }
 
 /* ErrorHandler - error handler callback */
-void
-ErrorHandler(BobInterpreter *c, int code, va_list ap)
-{
-    F_ENTER;
-
+void ErrorHandler(BobInterpreter *c, int code, va_list ap) {
     switch (code) {
-
-    case BobErrExit:
-        BobFreeInterpreter(c);
-        exit(1);
-
-    case BobErrRestart:
-        /* just restart the restart the read/eval/print loop */
-        break;
-
-    default:
-        BobShowError(c, code, ap);
-        BobStackTrace(c);
-        break;
+        case BobErrExit:
+            BobUnuseEval(c);
+            BobFreeInterpreter(c);
+            exit(1);
+        case BobErrRestart:
+            /* just restart the restart the read/eval/print loop */
+            break;
+        default:
+            BobShowError(c, code, ap);
+            BobStackTrace(c);
+            break;
     }
-
     BobAbort(c);
 }
 
 /* Usage - display a usage message and exit */
-static void
-Usage(void)
-{
-    F_ENTER;
-
-    fprintf(
-            stderr, "\
+static void Usage(void) {
+    fprintf(stderr, "\
 usage: bob [-c file]     compile a source file\n\
+           [-g]          include debugging information\n\
            [-i]          enter interactive mode after loading\n\
            [-o file]     object file name for compile\n\
            [-v]          enable verbose mode\n\
            [-?]          display (this) help information\n\
-           [file]        load a source or object file\n"
-    );
+           [file]        load a source or object file\n");
     exit(1);
 }
+

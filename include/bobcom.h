@@ -57,108 +57,138 @@
 #define T_SUPER         295
 #define T_NEW           296
 #define T_DOTDOT        297
-#define _TMAX           297
+#define T_TRY           298
+#define T_CATCH         299
+#define T_FINALLY       300
+#define T_THROW         301
+#define T_MATBEGIN  302 /* '[{' */
+#define T_MATEND    303 /* '}]' */
+#define _TMAX           303
 
 /* argument structure */
 typedef struct argument ARGUMENT;
 
-struct argument
-{
-    struct argument *arg_next;          /* next argument */
-    char            arg_name[1];        /* argument name */
+struct argument {
+    char *arg_name;             /* argument name */
+    struct argument *arg_next;  /* next argument */
 };
 
 /* argument table structure */
 typedef struct atable ATABLE;
 
-struct atable
-{
-    ARGUMENT      *at_arguments;        /* first argument */
-    ARGUMENT      **at_pNextArgument;   /* pointer to where to store the next argument */
-    struct atable *at_next;             /* next argument table */
+struct atable {
+    ARGUMENT *at_arguments;     /* first argument */
+    ARGUMENT **at_pNextArgument;/* pointer to where to store the next argument */
+    struct atable *at_next;     /* next argument table */
 };
 
 /* break/continue stack entry structure */
 typedef struct sentry SENTRY;
 
-struct sentry
-{
-    int    level;                       /* block level */
-    int    label;                       /* label */
-    SENTRY *next;                       /* next entry */
+struct sentry {
+    int level;                  /* block level */
+    int label;                  /* label */
 };
 
 /* case entry structure */
 typedef struct centry CENTRY;
 
-struct centry
-{
-    int    value;
-    int    label;
+struct centry {
+    int value;
+    int label;
     CENTRY *next;
 };
 
 /* switch entry structure */
 typedef struct swentry SWENTRY;
 
-struct swentry
-{
-    int     nCases;
-    CENTRY  *cases;
-    int     defaultLabel;
-    int     label;
-    SWENTRY *next;
+struct swentry {
+    int nCases;
+    CENTRY *cases;
+    int defaultLabel;
+    int label;
 };
 
+/* try/catch/finally entry structure */
+typedef struct TCENTRY TCENTRY;
+
+struct TCENTRY {
+    int handler;
+    int start;
+    int end;
+    TCENTRY *next;
+};
+
+/* limits */
+#define TKNSIZE         255     /* maximum BobToken size */
+#define LSIZE           255     /* maximum line size */
+#define SSIZE           20      /* break/continue/switch stack size */
+
+/* line number entry */
+typedef struct LineNumberEntry LineNumberEntry;
+
+struct LineNumberEntry {
+    int line;
+    int pc;
+};
+
+/* line number block */
+#define kLineNumberBlockSize    128
+
+typedef struct LineNumberBlock LineNumberBlock;
+
+struct LineNumberBlock {
+    LineNumberBlock *next;
+    int count;
+    LineNumberEntry entries[kLineNumberBlockSize];
+};
 
 /* compiler context structure */
-struct BobCompiler
-{
-    BobInterpreter *ic;                  /* compiler - interpreter context */
-    BobStream      *input;               /* compiler - input stream */
+struct BobCompiler {
+    BobInterpreter *ic;                 /* compiler - interpreter context */
+    BobStream *input;                   /* compiler - input stream */
+    int blockLevel;                     /* compiler - nesting level */
 
-    int            blockLevel;           /* compiler - nesting level */
-    ATABLE         *arguments;           /* compiler - argument frames */
+    ATABLE *arguments;                  /* compiler - argument frames */
+    TCENTRY *exceptions;                /* compiler - exceptions */
 
-    SENTRY         *bsp;                 /* compiler - break stack */
-    SENTRY         *csp;                 /* compiler - continue stack */
-    SWENTRY        *ssp;                 /* compiler - switch stack */
+    SENTRY bstack[SSIZE], *bsp, *bsbase;  /* compiler - break stack */
+    SENTRY cstack[SSIZE], *csp, *csbase;  /* compiler - continue stack */
+    SWENTRY sstack[SSIZE], *ssp, *ssbase; /* compiler - switch stack */
 
-    unsigned char  *codebuf;             /* compiler - code buffer */
-    unsigned char  *cbase, *cptr, *ctop; /* compiler - code buffer positions */
+    unsigned char *codebuf;             /* compiler - code buffer */
+    unsigned char *cbase, *cptr, *ctop;   /* compiler - code buffer positions */
+    BobValue literalbuf;                /* compiler - literal buffer */
+    long lbase, lptr, ltop;               /* compiler - literal buffer positions */
+    int emitLineNumbersP;               /* compiler - true to emit line number opcodes */
 
-    BobValue       literalbuf;           /* compiler - literal buffer */
-    long           lbase, lptr, ltop;    /* compiler - literal buffer positions */
+    LineNumberBlock *lineNumbers;       /* compiler - line number table entries */
+    LineNumberBlock *currentBlock;      /* compiler - where to store new line numbers */
 
-    BobIntegerType t_value;              /* scanner - integer value */
-    BobFloatType   t_fvalue;             /* scanner - float value */
+    BobIntegerType t_value;             /* scanner - integer value */
+    BobFloatType t_fvalue;              /* scanner - float value */
 
-    char           t_token[TKNSIZE + 1]; /* scanner - token string */
+    char t_token[TKNSIZE + 1];            /* scanner - token string */
 
-    int            savedToken;           /* scanner - look ahead BobToken */
-    int            savedChar;            /* scanner - look ahead character */
+    int lineNumberChangedP;             /* scanner - line number has changed */
+    int lineNumber;                     /* scanner - line number */
 
-    int            lineNumber;           /* scanner - line number */
-    char           line[LSIZE + 1];      /* scanner - last input line */
+    int savedToken;                     /* scanner - look ahead BobToken */
+    int savedChar;                      /* scanner - look ahead character */
 
-    char           *linePtr;             /* scanner - line pointer */
-    int            atEOF;                /* scanner - input end of file flag */
+    char line[LSIZE + 1];                 /* scanner - last input line */
+    char *linePtr;                      /* scanner - line pointer */
 
-    int            verbose;              /* verbose flag */
-    int            debug;                /* verbose flag */
+    int atEOF;                          /* scanner - input end of file flag */
 };
 
 /* prototypes for scanner.c */
-int
-BobToken(BobCompiler *c);
+int BobToken(BobCompiler *c);
 
-void
-BobSaveToken(BobCompiler *c, int tkn);
+void BobSaveToken(BobCompiler *c, int tkn);
 
-char *
-BobTokenName(int tkn);
+char *BobTokenName(int tkn);
 
-void
-BobParseError(BobCompiler *c, char *msg);
+void BobParseError(BobCompiler *c, char *msg);
 
 #endif
