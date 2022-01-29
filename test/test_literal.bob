@@ -80,3 +80,24 @@ stdout.Display(o2.a, " ", o3.a, "\n"); // and changes of o3 are not propagated t
 o3.a = 0;
 stdout.Display(o2.a, " ", o3.a, "\n"); // and changes of o3 are not propagated to o2 so al properties are copied not referenced
 
+// so what can we use var references for
+
+b = "b here , how are you?";
+a = \b;
+
+stdout.Display(a," ",b, "\n");
+
+switch(a) {
+
+case "a":
+	stdout.Display("case b: ", a, "\n");
+	break;
+
+case "b":
+	stdout.Display("case b: ", a, "\n");
+	break;
+
+default:
+	stdout.Display("default: ", a, "\n");
+	break;
+}
