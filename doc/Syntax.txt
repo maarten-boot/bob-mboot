@@ -1,0 +1,295 @@
+﻿function-definition:
+    "define" function-name "(" formal-arguments ")" block
+    .
+
+method-definition:
+    "define" object "." method-name "(" formal-arguments ")"
+    block
+    .
+
+formal-arguments:
+    [ required-arguments ] [optional-arguments ] [ rest-argument ]
+    .
+
+required-arguments:
+    identifier [ "," identifier ] ...
+    .
+
+optional-arguments:
+    optional-argument [ "," optional-argument ] ...
+    .
+
+optional-argument:
+    identifier "=" default-value
+    .
+
+rest-argument:
+    identifier ".."
+    .
+
+block:
+    "{" [ local-declaration ] ... statement ... "}"
+    .
+
+local-declaration:
+    "local" local-variable [ "," local-variable ] ... ";"
+    .
+
+local-variable:
+    identifier [ "=" initial-value ]
+    .
+
+statement:
+    block                |
+    if-statement         |
+    while-statement      |
+    do-while-statement   |
+    for-statement        |
+    break-statement      |
+    continue-statement   |
+    switch-statement     |
+    case-statement       |
+    default-statement    |
+    return-statement     |
+    expression-statement |
+    empty-statement
+    .
+
+if-statement:
+    "if" "(" test-expression ")" then-statement                       |
+    "if" "(" test-expression ")" then-statement "else" else-statement
+    .
+
+test-expression:
+    expression
+    .
+
+then-statement:
+    statement
+    .
+
+else-statement:
+    statement
+    .
+
+while-statement:
+    "while ""(" test-expression ")" statement
+    .
+
+do-while-statement:
+    "do" statement "while" "(" test-expression ")" ";"
+    .
+
+for-statement:
+    for "("
+        [ init-expression ] ";"
+        [ test-expression ] ";"
+        [ update-expression ]
+    ")"
+    statement
+    .
+
+break-statement:
+    "break" ";"
+    .
+
+continue-statement:
+    "continue" ";"
+    .
+
+switch-statement:
+    "switch" "(" expression ")" statement
+    .
+
+case-statement:
+    "case" literal-value ":"
+    .
+
+literal-value:
+    literal
+    .
+
+default-statement:
+    "default" ":"
+    .
+
+return-statement:
+    "return" ";"            |
+    "return" expression ";"
+    .
+
+expression-statement:
+    expression ";"
+    .
+
+empty-statement:
+    ";"
+    .
+
+expression:
+    sequence-expression         |
+    logical-expression          |
+    ternary-expression          |
+    assignment-expression       |
+    bitwise-logical-expression  |
+    comparison-expression       |
+    arithmetic-expression       |
+    increment-expression        |
+    object-creation-expression  |
+    method-call-expression      |
+    l-value                     |
+    literal                     |
+    "(" expression ")"
+    .
+
+sequence-expression:
+    expression "," expression
+    .
+
+logical-expression:
+    expression "||" expression    |
+    expression "&&" expression    |
+    "!" expression
+    .
+
+ternary-expression:
+    test-expression "?" true-expression ":" false-expression
+    .
+
+assignment-expression:
+    l-value "="   expression    |
+    l-value "+="  expression    |
+    l-value "-="  expression    |
+    l-value "*="  expression    |
+    l-value "/="  expression    |
+    l-value "%="  expression    |
+    l-value "&="  expression    |
+    l-value "|="  expression    |
+    l-value "^="  expression    |
+    l-value "<<=" expression    |
+    l-value ">>=" expression
+    .
+
+bitwise-logical-expressios:
+    expression "|" expression   |
+    expression "^" expression   |
+    expression "&" expression   |
+    "~" expression
+    .
+
+comparison-expression:
+    expression "==" expression  |
+    expression "!=" expression  |
+    expression "<"  expression  |
+    expression "<=" expression  |
+    expression ">=" expression  |
+    expression ">"  expression  |
+    expression "<<" expression  |
+    expression ">>" expression
+    .
+
+arithmetic-expression:
+    expression "+" expression   |
+    expression "-" expression   |
+    expression "*" expression   |
+    expression "/" expression   |
+    expression "%" expression   |
+    - expression
+    .
+
+increment-expression:
+    "++" l-value                |
+    "--" l-value                |
+    l-value "++"                |
+    l-value "--"
+    .
+
+object-creation-expression:
+    "new" expression "(" [ argument [ "," argument ] ... ] ")"
+    .
+method-call-expression:
+    expression "(" [ [ argument [ "," argument ] ... ] ] ")"
+    expression "." property-expression "(" [ [ argument [ "," argument ] ... ] ] ")"
+    "super" "." property-expression "(" [ [ argument [ "," argument ] ... ] ] ")"
+    .
+
+
+l-value:
+    expression "." property-expression |
+    expression "[" expression "]"      |
+    identifier
+    .
+
+property-expression:
+    identifier          |
+    "(" expression ")"
+    .
+
+literal:
+    literal-symbol      |
+    literal-function    |
+    literal-vector      |
+    literal-object      |
+    literal-integer     |
+    literal-float       |
+    literal-string      |
+    "true"              |
+    "false"             |
+    "nil"
+
+literal-symbol:
+    "\" identifier
+    .
+
+literal-vector:
+    \ [ [ expression [ "," expression ] ... ] ]
+    .
+
+literal-object:
+    \ "{" [ object-expression ] [ property-value [ "," property-value ] ... ] "}"
+    .
+
+object-expression:
+    << not yet defined >>
+    .
+
+property-value:
+    identifier ":" expression
+    .
+
+literal-function:
+    "function" [ name-string ] "(" formal-arguments ")" block
+    .
+
+// needs testing do_function does not check for T_STRING later only T_LITERAL
+name-string:
+    identifier      |
+    literal-string
+    .
+
+literal-string:
+    <<characters enclosed in double quotes>>
+    .
+
+<<
+    \b  backspace
+    \f  form feed
+    \n  newline
+    \r  return
+    \t  tab
+    \xNN    hex character code
+    \"  quote
+    \NNN    octal character code
+>>
+
+literal-integer:
+    <<digits optionally preceeded by 0 to indicate octal or 0x to indicate hexadecimal>>
+    /(0|0x)?[1-9][0-9]*/
+    .
+
+literal-float:
+    <<digits with either an embedded decimal point or e followed by an exponent>>
+    .
+
+identifier:
+    << regex/ [_a-zA-Z][_a-zA-Z0-9]* /

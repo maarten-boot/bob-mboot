@@ -1,0 +1,89 @@
+﻿== Globals
+
+stdin
+stdout
+stderr
+pi
+
+== Within a Method
+
+this
+_next
+
+== Library
+
+new Object
+new Object( [arg [, arg]…])
+Object.Class()
+Object.Clone()
+Object.Exists(symbol)
+Object.ExistsLocally(symbol)
+Object.Send(selector [,arg]…)
+Object.Show()
+
+Method.Decode([file])
+Method.Apply([arg [,arg]…])
+
+new Vector
+new Vector(size)
+Vector.Clone()
+Vector.size
+Vector.size = newSize
+Vector.Push(value)
+Vector.PushFront(value)
+Vector.Pop()
+Vector.PopFront()
+
+Symbol.printName
+
+new String
+new String(size)
+String.size
+String.Intern()
+String.Index(ch)
+String.ReverseIndex(ch)
+String.Substring(index,cnt)
+String.toInteger()
+String.toFloat()
+
+Integer.toInteger()
+Integer.toFloat()
+Integer.toString(fmt="%d")
+
+Float.toInteger()
+Float.toFloat()
+
+new File(name,mode)
+File.Print( [arg [, arg]…])
+File.Display( [arg [,arg]…])
+File.GetC()
+File.PutC(ch)
+File.Close()
+
+Type(value)
+
+toString(value)
+
+Load(filename)
+LoadObjectFile(filename)
+
+Quit()
+gc()
+
+abs(n)
+sin(n)
+cos(n)
+tan(n)
+asin(n)
+acos(n)
+atan(n[,m])
+sqrt(n)
+ceil(n)
+floor(n)
+exp(n)
+log(n)
+log2(n)
+log10(n)
+pow(x,y)
+
+rand(n)
