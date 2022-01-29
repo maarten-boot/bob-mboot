@@ -22,10 +22,16 @@ static BobValue BIF_Send(BobInterpreter *c);
 static BobValue BIF_Show(BobInterpreter *c);
 
 /* Object methods */
-static BobCMethod methods[] = {BobMethodEntry("initialize", BIF_initialize), BobMethodEntry("Class", BIF_Class),
-                               BobMethodEntry("Clone", BIF_Clone), BobMethodEntry("Exists", BIF_Exists),
-                               BobMethodEntry("ExistsLocally", BIF_ExistsLocally), BobMethodEntry("Send", BIF_Send),
-                               BobMethodEntry("Show", BIF_Show), BobMethodEntry(0, 0)};
+static BobCMethod methods[] = {
+    BobMethodEntry("initialize", BIF_initialize),
+    BobMethodEntry("Class", BIF_Class),
+    BobMethodEntry("Clone", BIF_Clone),
+    BobMethodEntry("Exists", BIF_Exists),
+    BobMethodEntry("ExistsLocally", BIF_ExistsLocally),
+    BobMethodEntry("Send", BIF_Send),
+    BobMethodEntry("Show", BIF_Show),
+    BobMethodEntry(0, 0)
+};
 
 /* BobInitObject - initialize the 'Object' object */
 void BobInitObject(BobInterpreter *c) {
@@ -43,6 +49,7 @@ static BobValue BIF_initialize(BobInterpreter *c) {
 /* BIF_Class - built-in function 'Class' */
 static BobValue BIF_Class(BobInterpreter *c) {
     BobValue obj;
+
     BobParseArguments(c, "V=*", &obj, &BobObjectDispatch);
     return BobObjectClass(obj);
 }
@@ -50,6 +57,7 @@ static BobValue BIF_Class(BobInterpreter *c) {
 /* BIF_Clone - built-in method 'Clone' */
 static BobValue BIF_Clone(BobInterpreter *c) {
     BobValue obj;
+
     BobParseArguments(c, "V=*", &obj, &BobObjectDispatch);
     return BobCloneObject(c, obj);
 }
@@ -57,6 +65,7 @@ static BobValue BIF_Clone(BobInterpreter *c) {
 /* BIF_Exists - built-in method 'Exists' */
 static BobValue BIF_Exists(BobInterpreter *c) {
     BobValue obj, tag;
+
     BobParseArguments(c, "V=*V", &obj, &BobObjectDispatch, &tag);
     while (BobObjectP(obj)) {
         if (BobFindProperty(c, obj, tag, NULL, NULL)) {
@@ -70,7 +79,9 @@ static BobValue BIF_Exists(BobInterpreter *c) {
 /* BIF_ExistsLocally - built-in method 'ExistsLocally' */
 static BobValue BIF_ExistsLocally(BobInterpreter *c) {
     BobValue obj, tag;
+
     BobParseArguments(c, "V=*V", &obj, &BobObjectDispatch, &tag);
+
     return BobToBoolean(c, BobFindProperty(c, obj, tag, NULL, NULL) != NULL);
 }
 
