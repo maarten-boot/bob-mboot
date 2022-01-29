@@ -1,18 +1,18 @@
 test_obj.bob
-Class: <Object-7f2204ba6120>
+Class: <Object-7f4a938ee120>
 Properties:
   printA: <Method-printA>
   initialize: <Method-initialize>
-<Object-7f2204ba8764><Object-7f2204ba6120><Object-7f2204ba8764>
-Class: <Object-7f2204ba6120>
+<Object-7f4a938f0764><Object-7f4a938ee120><Object-7f4a938f0764>
+Class: <Object-7f4a938ee120>
 Properties:
   a: 2
   printA: <Method-printA>
   initialize: <Method-initialize>
-<Object-7f2204ba8764><Object-7f2204ba6120><Object-7f2204ba8764>
-<Object-7f2204ba8764>
-<Object-7f2204ba8e7c> a 98
-Class: <Object-7f2204ba8764>
+<Object-7f4a938f0764><Object-7f4a938ee120><Object-7f4a938f0764>
+<Object-7f4a938f0764>
+<Object-7f4a938f0e7c> a 98
+Class: <Object-7f4a938f0764>
 Properties:
   aaa: <Method-aaa>
   b: 98
