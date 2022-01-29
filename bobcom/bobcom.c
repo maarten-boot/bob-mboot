@@ -140,7 +140,9 @@ static void do_literal_symbol(BobCompiler *c, PVAL *pv);
 static void do_literal_vector(BobCompiler *c, PVAL *pv);
 
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
+#ifdef BOB_INCLUDE_MATRIX
 static void do_literal_matrix(BobCompiler *c,PVAL *pv);
+#endif
 #endif
 
 static void do_literal_object(BobCompiler *c, PVAL *pv);
@@ -642,7 +644,9 @@ static void do_if(BobCompiler *c) {
         putcbyte(c, BobOpBR);
         end = putcword(c, NIL);
         fixup(c, nxt, codeaddr(c));
+
         do_statement(c);
+
         nxt = end;
     } else {
         BobSaveToken(c, tkn);
@@ -659,6 +663,7 @@ static void do_while(BobCompiler *c) {
 
     /* compile the test expression */
     nxt = codeaddr(c);
+
     do_test(c);
 
     /* skip around the loop body if the expression is false */
@@ -668,7 +673,9 @@ static void do_while(BobCompiler *c) {
     /* compile the loop body */
     ob = addbreak(c, end);
     oc = addcontinue(c, nxt);
+
     do_statement(c);
+
     end = rembreak(c, ob, end);
     remcontinue(c, oc);
 
@@ -691,13 +698,17 @@ static void do_dowhile(BobCompiler *c) {
     /* compile the loop body */
     ob = addbreak(c, 0);
     oc = addcontinue(c, nxt);
+
     do_statement(c);
+
     end = rembreak(c, ob, end);
     remcontinue(c, oc);
 
     /* compile the test expression */
     frequire(c, T_WHILE);
+
     do_test(c);
+
     frequire(c, ';');
 
     /* branch to the top if the expression is true */
@@ -1015,7 +1026,9 @@ static void do_try(BobCompiler *c) {
     /* compile the protected block */
     frequire(c, '{');
     entry->start = codeaddr(c);
+
     do_block(c);
+
     entry->end = codeaddr(c);
 
     /* branch to the 'finally' code */
@@ -1033,7 +1046,9 @@ static void do_try(BobCompiler *c) {
         /* compile the catch block */
         entry->handler = codeaddr(c);
         frequire(c, '{');
+
         do_block(c);
+
         tkn = BobToken(c);
     }
 
@@ -1043,7 +1058,9 @@ static void do_try(BobCompiler *c) {
     /* handle a 'finally' clause */
     if (tkn == T_FINALLY) {
         frequire(c, '{');
+
         do_block(c);
+
     } else {
         BobSaveToken(c, tkn);
     }
@@ -1056,6 +1073,7 @@ static void do_try(BobCompiler *c) {
 /* do_throw - compile the 'throw' statement */
 static void do_throw(BobCompiler *c) {
     do_expr(c);
+
     putcbyte(c, BobOpTHROW);
     frequire(c, ';');
 }
@@ -1089,7 +1107,9 @@ static void do_block(BobCompiler *c) {
                 frequire(c, T_IDENTIFIER);
                 strcpy(name, c->t_token);
                 if ((tkn = BobToken(c)) == '=') {
+
                     do_init_expr(c);
+
                     putcbyte(c, BobOpESET);
                     putcbyte(c, 0);
                     putcbyte(c, 1 + tcnt);
@@ -1133,7 +1153,9 @@ static void do_return(BobCompiler *c) {
         putcbyte(c, BobOpNIL);
     } else {
         BobSaveToken(c, tkn);
+
         do_expr(c);
+
         frequire(c, ';');
     }
 
@@ -1144,7 +1166,9 @@ static void do_return(BobCompiler *c) {
 /* do_test - compile a test expression */
 static void do_test(BobCompiler *c) {
     frequire(c, '(');
+
     do_expr(c);
+
     frequire(c, ')');
 }
 
@@ -1184,10 +1208,14 @@ static void chklvalue(BobCompiler *c, PVAL *pv) {
 /* do_expr1 - handle the ',' operator */
 static void do_expr1(BobCompiler *c, PVAL *pv) {
     int tkn;
+
     do_expr2(c, pv);
+
     while ((tkn = BobToken(c)) == ',') {
         rvalue(c, pv);
+
         do_expr1(c, pv);
+
         rvalue(c, pv);
     }
     BobSaveToken(c, tkn);
@@ -1196,34 +1224,55 @@ static void do_expr1(BobCompiler *c, PVAL *pv) {
 /* do_expr2 - handle the assignment operators */
 static void do_expr2(BobCompiler *c, PVAL *pv) {
     int tkn;
+
     do_expr3(c, pv);
-    while ((tkn = BobToken(c)) == '=' || tkn == T_ADDEQ || tkn == T_SUBEQ || tkn == T_MULEQ || tkn == T_DIVEQ ||
-           tkn == T_REMEQ || tkn == T_ANDEQ || tkn == T_OREQ || tkn == T_XOREQ || tkn == T_SHLEQ || tkn == T_SHREQ) {
+
+    while (
+        (tkn = BobToken(c)) == '=' ||
+        tkn == T_ADDEQ ||
+        tkn == T_SUBEQ ||
+        tkn == T_MULEQ ||
+        tkn == T_DIVEQ ||
+        tkn == T_REMEQ ||
+        tkn == T_ANDEQ ||
+        tkn == T_OREQ ||
+        tkn == T_XOREQ ||
+        tkn == T_SHLEQ ||
+        tkn == T_SHREQ
+    ) {
+
         chklvalue(c, pv);
         switch (tkn) {
             case '=': {
                 PVAL pv2;
                 (*pv->fcn)(c, PUSH, 0);
+
                 do_expr2(c, &pv2);
+
                 rvalue(c, &pv2);
                 (*pv->fcn)(c, STORE, pv);
             }
                 break;
+
             case T_ADDEQ:
                 do_assignment(c, pv, BobOpADD);
                 break;
+
             case T_SUBEQ:
                 do_assignment(c, pv, BobOpSUB);
                 break;
+
             case T_MULEQ:
                 do_assignment(c, pv, BobOpMUL);
                 break;
+
             case T_DIVEQ:
                 do_assignment(c, pv, BobOpDIV);
                 break;
             case T_REMEQ:
                 do_assignment(c, pv, BobOpREM);
                 break;
+
             case T_ANDEQ:
                 do_assignment(c, pv, BobOpBAND);
                 break;
@@ -1233,6 +1282,7 @@ static void do_expr2(BobCompiler *c, PVAL *pv) {
             case T_XOREQ:
                 do_assignment(c, pv, BobOpXOR);
                 break;
+
             case T_SHLEQ:
                 do_assignment(c, pv, BobOpSHL);
                 break;
@@ -1251,7 +1301,9 @@ static void do_assignment(BobCompiler *c, PVAL *pv, int op) {
     (*pv->fcn)(c, DUP, 0);
     (*pv->fcn)(c, LOAD, pv);
     putcbyte(c, BobOpPUSH);
+
     do_expr2(c, &pv2);
+
     rvalue(c, &pv2);
     putcbyte(c, op);
     (*pv->fcn)(c, STORE, pv);
@@ -1260,18 +1312,24 @@ static void do_assignment(BobCompiler *c, PVAL *pv, int op) {
 /* do_expr3 - handle the '?:' operator */
 static void do_expr3(BobCompiler *c, PVAL *pv) {
     int tkn, nxt, end;
+
     do_expr4(c, pv);
+
     while ((tkn = BobToken(c)) == '?') {
         rvalue(c, pv);
         putcbyte(c, BobOpBRF);
         nxt = putcword(c, NIL);
+
         do_expr1(c, pv);
+
         rvalue(c, pv);
         frequire(c, ':');
         putcbyte(c, BobOpBR);
         end = putcword(c, NIL);
         fixup(c, nxt, codeaddr(c));
+
         do_expr1(c, pv);
+
         rvalue(c, pv);
         fixup(c, end, codeaddr(c));
     }
@@ -1282,14 +1340,18 @@ static void do_expr3(BobCompiler *c, PVAL *pv) {
 static void do_expr4(BobCompiler *c, PVAL *pv) {
     int tkn, nxt, end = 0;
     do_expr5(c, pv);
+
     while ((tkn = BobToken(c)) == T_OR) {
         rvalue(c, pv);
         putcbyte(c, BobOpBRT);
         nxt = putcword(c, end);
+
         do_expr5(c, pv);
+
         rvalue(c, pv);
         end = nxt;
     }
+
     fixup(c, end, codeaddr(c));
     BobSaveToken(c, tkn);
 }
@@ -1297,15 +1359,20 @@ static void do_expr4(BobCompiler *c, PVAL *pv) {
 /* do_expr5 - handle the '&&' operator */
 static void do_expr5(BobCompiler *c, PVAL *pv) {
     int tkn, nxt, end = 0;
+
     do_expr6(c, pv);
+
     while ((tkn = BobToken(c)) == T_AND) {
         rvalue(c, pv);
         putcbyte(c, BobOpBRF);
         nxt = putcword(c, end);
+
         do_expr6(c, pv);
+
         rvalue(c, pv);
         end = nxt;
     }
+
     fixup(c, end, codeaddr(c));
     BobSaveToken(c, tkn);
 }
@@ -1313,39 +1380,53 @@ static void do_expr5(BobCompiler *c, PVAL *pv) {
 /* do_expr6 - handle the '|' operator */
 static void do_expr6(BobCompiler *c, PVAL *pv) {
     int tkn;
+
     do_expr7(c, pv);
+
     while ((tkn = BobToken(c)) == '|') {
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr7(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, BobOpBOR);
     }
+
     BobSaveToken(c, tkn);
 }
 
 /* do_expr7 - handle the '^' operator */
 static void do_expr7(BobCompiler *c, PVAL *pv) {
     int tkn;
+
     do_expr8(c, pv);
+
     while ((tkn = BobToken(c)) == '^') {
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr8(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, BobOpXOR);
     }
+
     BobSaveToken(c, tkn);
 }
 
 /* do_expr8 - handle the '&' operator */
 static void do_expr8(BobCompiler *c, PVAL *pv) {
     int tkn;
+
     do_expr9(c, pv);
+
     while ((tkn = BobToken(c)) == '&') {
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr9(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, BobOpBAND);
     }
@@ -1355,15 +1436,20 @@ static void do_expr8(BobCompiler *c, PVAL *pv) {
 /* do_expr9 - handle the '==' and '!=' operators */
 static void do_expr9(BobCompiler *c, PVAL *pv) {
     int tkn, op;
+
     do_expr10(c, pv);
+
     while ((tkn = BobToken(c)) == T_EQ || tkn == T_NE) {
         switch (tkn) {
+
             case T_EQ:
                 op = BobOpEQ;
                 break;
+
             case T_NE:
                 op = BobOpNE;
                 break;
+
             default:
                 BobCallErrorHandler(c->ic, BobErrImpossible, c);
                 op = 0;
@@ -1371,7 +1457,9 @@ static void do_expr9(BobCompiler *c, PVAL *pv) {
         }
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr10(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, op);
     }
@@ -1381,7 +1469,9 @@ static void do_expr9(BobCompiler *c, PVAL *pv) {
 /* do_expr10 - handle the '<', '<=', '>=' and '>' operators */
 static void do_expr10(BobCompiler *c, PVAL *pv) {
     int tkn, op;
+
     do_expr11(c, pv);
+
     while ((tkn = BobToken(c)) == '<' || tkn == T_LE || tkn == T_GE || tkn == '>') {
         switch (tkn) {
             case '<':
@@ -1403,7 +1493,9 @@ static void do_expr10(BobCompiler *c, PVAL *pv) {
         }
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr11(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, op);
     }
@@ -1413,7 +1505,9 @@ static void do_expr10(BobCompiler *c, PVAL *pv) {
 /* do_expr11 - handle the '<<' and '>>' operators */
 static void do_expr11(BobCompiler *c, PVAL *pv) {
     int tkn, op;
+
     do_expr12(c, pv);
+
     while ((tkn = BobToken(c)) == T_SHL || tkn == T_SHR) {
         switch (tkn) {
             case T_SHL:
@@ -1429,7 +1523,9 @@ static void do_expr11(BobCompiler *c, PVAL *pv) {
         }
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr12(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, op);
     }
@@ -1439,7 +1535,9 @@ static void do_expr11(BobCompiler *c, PVAL *pv) {
 /* do_expr12 - handle the '+' and '-' operators */
 static void do_expr12(BobCompiler *c, PVAL *pv) {
     int tkn, op;
+
     do_expr13(c, pv);
+
     while ((tkn = BobToken(c)) == '+' || tkn == '-') {
         switch (tkn) {
             case '+':
@@ -1455,7 +1553,9 @@ static void do_expr12(BobCompiler *c, PVAL *pv) {
         }
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr13(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, op);
     }
@@ -1465,7 +1565,9 @@ static void do_expr12(BobCompiler *c, PVAL *pv) {
 /* do_expr13 - handle the '*' and '/' operators */
 static void do_expr13(BobCompiler *c, PVAL *pv) {
     int tkn, op;
+
     do_expr14(c, pv);
+
     while ((tkn = BobToken(c)) == '*' || tkn == '/' || tkn == '%') {
         switch (tkn) {
             case '*':
@@ -1482,9 +1584,12 @@ static void do_expr13(BobCompiler *c, PVAL *pv) {
                 op = 0;
                 break;
         }
+
         rvalue(c, pv);
         putcbyte(c, BobOpPUSH);
+
         do_expr14(c, pv);
+
         rvalue(c, pv);
         putcbyte(c, op);
     }
@@ -1496,28 +1601,38 @@ static void do_expr14(BobCompiler *c, PVAL *pv) {
     int tkn;
     switch (tkn = BobToken(c)) {
         case '-':
+
             do_expr15(c, pv);
+
             rvalue(c, pv);
             putcbyte(c, BobOpNEG);
             break;
+
         case '!':
             do_expr15(c, pv);
+
             rvalue(c, pv);
             putcbyte(c, BobOpNOT);
             break;
+
         case '~':
             do_expr15(c, pv);
+
             rvalue(c, pv);
             putcbyte(c, BobOpBNOT);
             break;
+
         case T_INC:
             do_preincrement(c, pv, BobOpINC);
             break;
+
         case T_DEC:
             do_preincrement(c, pv, BobOpDEC);
             break;
+
         default:
             BobSaveToken(c, tkn);
+
             do_expr15(c, pv);
             return;
     }
@@ -1526,6 +1641,7 @@ static void do_expr14(BobCompiler *c, PVAL *pv) {
 /* do_preincrement - handle prefix '++' and '--' */
 static void do_preincrement(BobCompiler *c, PVAL *pv, int op) {
     do_expr15(c, pv);
+
     chklvalue(c, pv);
     (*pv->fcn)(c, DUP, 0);
     (*pv->fcn)(c, LOAD, pv);
@@ -1548,21 +1664,28 @@ static void do_postincrement(BobCompiler *c, PVAL *pv, int op) {
 /* do_expr15 - handle function calls */
 static void do_expr15(BobCompiler *c, PVAL *pv) {
     int tkn;
+
     do_primary(c, pv);
+
     while ((tkn = BobToken(c)) == '(' || tkn == '[' || tkn == '.' || tkn == T_INC || tkn == T_DEC) {
         switch (tkn) {
+
             case '(':
                 do_call(c, pv);
                 break;
+
             case '[':
                 do_index(c, pv);
                 break;
+
             case '.':
                 do_prop_reference(c, pv);
                 break;
+
             case T_INC:
                 do_postincrement(c, pv, BobOpINC);
                 break;
+
             case T_DEC:
                 do_postincrement(c, pv, BobOpDEC);
                 break;
@@ -1582,15 +1705,15 @@ static void do_prop_reference(BobCompiler *c, PVAL *pv) {
     /* get the selector */
     do_selector(c);
 
-    /* check for a method call */
     if ((tkn = BobToken(c)) == '(') {
+        /* check for a method call */
         putcbyte(c, BobOpPUSH);
         putcbyte(c, BobOpOVER);
+
         do_method_call(c, pv);
     }
-
-        /* handle a property reference */
     else {
+        /* handle a property reference */
         BobSaveToken(c, tkn);
         pv->fcn = code_property;
     }
@@ -1599,14 +1722,19 @@ static void do_prop_reference(BobCompiler *c, PVAL *pv) {
 /* do_selector - parse a property selector */
 static void do_selector(BobCompiler *c) {
     int tkn;
+
     switch (tkn = BobToken(c)) {
+
         case T_IDENTIFIER:
             code_literal(c, addliteral(c, BobInternCString(c->ic, c->t_token)));
             break;
+
         case '(':
             do_expr(c);
+
             frequire(c, ')');
             break;
+
         default:
             BobParseError(c, "Expecting a property selector");
             break;
@@ -1615,6 +1743,7 @@ static void do_selector(BobCompiler *c) {
 
 /* do_primary - parse a primary expression and unary operators */
 static void do_primary(BobCompiler *c, PVAL *pv) {
+
     switch (BobToken(c)) {
 
         case T_FUNCTION:
@@ -1627,28 +1756,33 @@ static void do_primary(BobCompiler *c, PVAL *pv) {
 
         case '(':
             do_expr1(c, pv);
+
             frequire(c, ')');
             break;
 
         case T_INTEGER:
             do_lit_integer(c, c->t_value);
+
             pv->fcn = NULL;
             break;
 
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
         case T_FLOAT:
             do_lit_float(c,c->t_fvalue);
+
             pv->fcn = NULL;
             break;
 #endif
 
         case T_STRING:
             do_lit_string(c, c->t_token);
+
             pv->fcn = NULL;
             break;
 
         case T_NIL:
             putcbyte(c, BobOpNIL);
+
             pv->fcn = NULL;
             break;
 
@@ -1666,6 +1800,7 @@ static void do_primary(BobCompiler *c, PVAL *pv) {
 
         case '{':
             do_block(c);
+
             pv->fcn = NULL;
             break;
 
@@ -1701,7 +1836,8 @@ static void do_function(BobCompiler *c, PVAL *pv) {
     /* store the function as the value of the global symbol */
     // TODO: if (tkn == T_IDENTIFIER | tkn == T_STRING ) {
     // if (tkn == T_IDENTIFIER) {
-    if (tkn == T_IDENTIFIER | tkn == T_STRING ) {
+
+    if ((tkn == T_IDENTIFIER) | (tkn == T_STRING) ) {
         putcbyte(c, BobOpGSET);
         putcword(c, make_lit_symbol(c, name));
     }
@@ -1722,9 +1858,11 @@ static void do_literal(BobCompiler *c, PVAL *pv) {
             break;
 
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
+#ifdef BOB_INCLUDE_MATRIX
         case T_MATBEGIN:    /* matrix */
             do_literal_matrix(c,pv);
             break;
+#endif
 #endif
 
         case '{':           /* object */
@@ -1770,6 +1908,8 @@ static void do_literal_vector(BobCompiler *c, PVAL *pv) {
 
 /* do_literal_matrix - parse a literal matrix */
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
+#ifdef BOB_INCLUDE_MATRIX
+
 static void do_literal_matrix(BobCompiler *c,PVAL *pv)
 {
     BobIntegerType nRows = 0;
@@ -1819,6 +1959,8 @@ static void do_literal_matrix(BobCompiler *c,PVAL *pv)
     putcbyte(c,BobOpNEWMATRIX);
     pv->fcn = NULL;
 }
+
+#endif
 #endif
 
 /* do_literal_object - parse a literal object */
@@ -1885,7 +2027,9 @@ static void do_literal_object(BobCompiler *c, PVAL *pv) {
 
                     putcbyte(c, BobOpPUSH);
                     putcbyte(c, BobOpPUSH);
+
                     code_literal(c, addliteral(c, BobInternCString(c->ic, c->t_token)));
+
                     putcbyte(c, BobOpPUSH);
 
                     frequire(c, ':');
@@ -1917,6 +2061,7 @@ static void do_call(BobCompiler *c, PVAL *pv) {
         BobSaveToken(c, tkn);
         do {
             do_expr2(c, pv);
+
             rvalue(c, pv);
             putcbyte(c, BobOpPUSH);
             ++n;
@@ -1935,16 +2080,23 @@ static void do_call(BobCompiler *c, PVAL *pv) {
 /* do_super - compile a super.selector() expression */
 static void do_super(BobCompiler *c, PVAL *pv) {
     /* object is 'this' */
+
     if (!load_argument(c, "this")) {
         BobParseError(c, "Use of super outside of a method");
     }
+
     putcbyte(c, BobOpPUSH);
     frequire(c, '.');
+
     do_selector(c);
+
     putcbyte(c, BobOpPUSH);
     frequire(c, '(');
+
     load_argument(c, "_next");
+
     putcbyte(c, BobOpPUSH);
+
     do_method_call(c, pv);
 }
 
@@ -1955,8 +2107,11 @@ static void do_new_object(BobCompiler *c, PVAL *pv) {
     /* get the property */
     if ((tkn = BobToken(c)) == T_IDENTIFIER) {
         variable_ref(c, c->t_token);
+
     } else if (tkn == '(') {
+
         do_expr(c);
+
         frequire(c, ')');
     } else {
         BobParseError(c, "Expecting an object expression");
@@ -1968,14 +2123,16 @@ static void do_new_object(BobCompiler *c, PVAL *pv) {
     /* check for needing to call the 'initialize' method */
     if ((tkn = BobToken(c)) == '(') {
         putcbyte(c, BobOpPUSH);
+
         code_literal(c, addliteral(c, BobInternCString(c->ic, "initialize")));
+
         putcbyte(c, BobOpPUSH);
         putcbyte(c, BobOpOVER);
+
         do_method_call(c, pv);
     }
-
-        /* no 'initialize' call */
     else {
+        /* no 'initialize' call */
         BobSaveToken(c, tkn);
         pv->fcn = NULL;
     }
@@ -1990,6 +2147,7 @@ static void do_method_call(BobCompiler *c, PVAL *pv) {
         BobSaveToken(c, tkn);
         do {
             do_expr2(c, pv);
+
             rvalue(c, pv);
             putcbyte(c, BobOpPUSH);
             ++n;
@@ -2007,7 +2165,9 @@ static void do_method_call(BobCompiler *c, PVAL *pv) {
 static void do_index(BobCompiler *c, PVAL *pv) {
     rvalue(c, pv);
     putcbyte(c, BobOpPUSH);
+
     do_expr(c);
+
     frequire(c, ']');
     pv->fcn = code_index;
 }
@@ -2015,9 +2175,11 @@ static void do_index(BobCompiler *c, PVAL *pv) {
 /* AddArgument - add a formal argument */
 static void AddArgument(BobCompiler *c, ATABLE *atable, char *name) {
     ARGUMENT *arg;
+
     if ((arg = (ARGUMENT *) BobAlloc(c->ic, sizeof(ARGUMENT))) == NULL) {
         BobInsufficientMemory(c->ic);
     }
+
     arg->arg_name = copystring(c, name);
     arg->arg_next = NULL;
     *atable->at_pNextArgument = arg;
@@ -2027,12 +2189,15 @@ static void AddArgument(BobCompiler *c, ATABLE *atable, char *name) {
 /* MakeArgFrame - make a new argument frame */
 static ATABLE *MakeArgFrame(BobCompiler *c) {
     ATABLE *atable;
+
     if ((atable = (ATABLE *) BobAlloc(c->ic, sizeof(ATABLE))) == NULL) {
         BobInsufficientMemory(c->ic);
     }
+
     atable->at_arguments = NULL;
     atable->at_pNextArgument = &atable->at_arguments;
     atable->at_next = NULL;
+
     return atable;
 }
 
@@ -2051,12 +2216,14 @@ static void PushNewArgFrame(BobCompiler *c) {
 static void PopArgFrame(BobCompiler *c) {
     ARGUMENT *arg, *nxt;
     ATABLE *atable;
+
     for (arg = c->arguments->at_arguments; arg != NULL; arg = nxt) {
         nxt = arg->arg_next;
         BobFree(c->ic, arg->arg_name);
         BobFree(c->ic, (char *) arg);
         arg = nxt;
     }
+
     atable = c->arguments->at_next;
     BobFree(c->ic, (char *) c->arguments);
     c->arguments = atable;
@@ -2074,9 +2241,11 @@ static int FindArgument(BobCompiler *c, char *name, int *plev, int *poff) {
     ATABLE *table;
     ARGUMENT *arg;
     int lev, off;
+
     lev = 0;
     for (table = c->arguments; table != NULL; table = table->at_next) {
         off = 1;
+
         for (arg = table->at_arguments; arg != NULL; arg = arg->arg_next) {
             if (strcmp(name, arg->arg_name) == 0) {
                 *plev = lev;
@@ -2087,21 +2256,26 @@ static int FindArgument(BobCompiler *c, char *name, int *plev, int *poff) {
         }
         ++lev;
     }
+
     return FALSE;
 }
 
 /* addliteral - add a literal to the literal vector */
 static int addliteral(BobCompiler *c, BobValue lit) {
     long p;
+
     for (p = c->lbase; p < c->lptr; ++p) {
         if (BobVectorElement(c->literalbuf, p) == lit) {
             return (int) (BobFirstLiteral + (p - c->lbase));
         }
     }
+
     if (c->lptr >= c->ltop) {
         BobParseError(c, "too many literals");
     }
+
     BobSetVectorElement(c->literalbuf, p = c->lptr++, lit);
+
     return (int) (BobFirstLiteral + (p - c->lbase));
 }
 
@@ -2112,7 +2286,8 @@ static void frequire(BobCompiler *c, int rtkn) {
 
 /* require - check for a required BobToken */
 static void require(BobCompiler *c, int tkn, int rtkn) {
-    char msg[100], tknbuf[100];
+    char msg[100*2], tknbuf[100];
+
     if (tkn != rtkn) {
         strcpy(tknbuf, BobTokenName(rtkn));
         sprintf(msg, "Expecting '%s', found '%s'", tknbuf, BobTokenName(tkn));
@@ -2156,23 +2331,29 @@ static int make_lit_symbol(BobCompiler *c, char *pname) {
 /* variable_ref - compile a variable reference */
 static void variable_ref(BobCompiler *c, char *name) {
     PVAL pv;
+
     findvariable(c, name, &pv);
+
     rvalue(c, &pv);
 }
 
 /* findvariable - find a variable */
 static void findvariable(BobCompiler *c, char *id, PVAL *pv) {
     int lev, off;
+
     if (strcmp(id, "true") == 0) {
         pv->fcn = code_constant;
         pv->val = BobOpT;
+
     } else if (strcmp(id, "false") == 0 || strcmp(id, "nil") == 0) {
         pv->fcn = code_constant;
         pv->val = BobOpNIL;
+
     } else if (FindArgument(c, id, &lev, &off)) {
         pv->fcn = code_argument;
         pv->val = lev;
         pv->val2 = off;
+
     } else {
         pv->fcn = code_variable;
         pv->val = make_lit_symbol(c, id);
@@ -2182,9 +2363,11 @@ static void findvariable(BobCompiler *c, char *id, PVAL *pv) {
 /* code_constant - compile a constant reference */
 static void code_constant(BobCompiler *c, int fcn, PVAL *pv) {
     switch (fcn) {
+
         case LOAD:
             putcbyte(c, pv->val);
             break;
+
         case STORE:
             BobCallErrorHandler(c->ic, BobErrStoreIntoConstant, c);
             break;
@@ -2194,23 +2377,29 @@ static void code_constant(BobCompiler *c, int fcn, PVAL *pv) {
 /* load_argument - compile code to load an argument */
 static int load_argument(BobCompiler *c, char *name) {
     int lev, off;
+
     if (!FindArgument(c, name, &lev, &off)) {
         return FALSE;
     }
+
     putcbyte(c, BobOpEREF);
     putcbyte(c, lev);
     putcbyte(c, off);
+
     return TRUE;
 }
 
 /* code_argument - compile an argument (environment) reference */
 static void code_argument(BobCompiler *c, int fcn, PVAL *pv) {
+
     switch (fcn) {
+
         case LOAD:
             putcbyte(c, BobOpEREF);
             putcbyte(c, pv->val);
             putcbyte(c, pv->val2);
             break;
+
         case STORE:
             putcbyte(c, BobOpESET);
             putcbyte(c, pv->val);
@@ -2222,15 +2411,19 @@ static void code_argument(BobCompiler *c, int fcn, PVAL *pv) {
 /* code_property - compile a property reference */
 static void code_property(BobCompiler *c, int fcn, PVAL *pv) {
     switch (fcn) {
+
         case LOAD:
             putcbyte(c, BobOpGETP);
             break;
+
         case STORE:
             putcbyte(c, BobOpSETP);
             break;
+
         case PUSH:
             putcbyte(c, BobOpPUSH);
             break;
+
         case DUP:
             putcbyte(c, BobOpDUP2);
             break;
@@ -2240,10 +2433,12 @@ static void code_property(BobCompiler *c, int fcn, PVAL *pv) {
 /* code_variable - compile a variable reference */
 static void code_variable(BobCompiler *c, int fcn, PVAL *pv) {
     switch (fcn) {
+
         case LOAD:
             putcbyte(c, BobOpGREF);
             putcword(c, pv->val);
             break;
+
         case STORE:
             putcbyte(c, BobOpGSET);
             putcword(c, pv->val);
@@ -2254,15 +2449,19 @@ static void code_variable(BobCompiler *c, int fcn, PVAL *pv) {
 /* code_index - compile an indexed reference */
 static void code_index(BobCompiler *c, int fcn, PVAL *pv) {
     switch (fcn) {
+
         case LOAD:
             putcbyte(c, BobOpVREF);
             break;
+
         case STORE:
             putcbyte(c, BobOpVSET);
             break;
+
         case PUSH:
             putcbyte(c, BobOpPUSH);
             break;
+
         case DUP:
             putcbyte(c, BobOpDUP2);
             break;
@@ -2283,34 +2482,42 @@ static int codeaddr(BobCompiler *c) {
 /* putcbyte - put a code byte into the code buffer */
 static int putcbyte(BobCompiler *c, int b) {
     int addr = codeaddr(c);
+
     if (c->cptr >= c->ctop) {
         BobCallErrorHandler(c->ic, BobErrTooMuchCode, c);
     }
+
     if (c->emitLineNumbersP && c->lineNumberChangedP) {
         c->lineNumberChangedP = FALSE;
         AddLineNumber(c, c->lineNumber, codeaddr(c));
     }
+
     *c->cptr++ = b;
+
     return addr;
 }
 
 /* putcword - put a code word into the code buffer */
 static int putcword(BobCompiler *c, int w) {
     int addr = codeaddr(c);
+
     if (c->cptr >= c->ctop) {
         BobCallErrorHandler(c->ic, BobErrTooMuchCode, c);
     }
     *c->cptr++ = w;
+
     if (c->cptr >= c->ctop) {
         BobCallErrorHandler(c->ic, BobErrTooMuchCode, c);
     }
     *c->cptr++ = w >> 8;
+
     return addr;
 }
 
 /* fixup - fixup a reference chain */
 static void fixup(BobCompiler *c, int chn, int val) {
     int hval, nxt;
+
     for (hval = val >> 8; chn != NIL; chn = nxt) {
         nxt = (c->cbase[chn] & 0xFF) | (c->cbase[chn + 1] << 8);
         c->cbase[chn] = val;
@@ -2322,9 +2529,11 @@ static void fixup(BobCompiler *c, int chn, int val) {
 static void AddLineNumber(BobCompiler *c, int line, int pc) {
     LineNumberBlock *current;
     LineNumberEntry *entry;
+
     if (!(current = c->currentBlock) || current->count >= kLineNumberBlockSize) {
         current = AddLineNumberBlock(c);
     }
+
     entry = &current->entries[current->count++];
     entry->line = line;
     entry->pc = pc;
@@ -2333,16 +2542,20 @@ static void AddLineNumber(BobCompiler *c, int line, int pc) {
 /* AddLineNumberBlock - add a new block of line numbers */
 static LineNumberBlock *AddLineNumberBlock(BobCompiler *c) {
     LineNumberBlock *current, *block;
+
     if (!(block = (LineNumberBlock *) BobAlloc(c->ic, sizeof(LineNumberBlock)))) {
         BobInsufficientMemory(c->ic);
     }
+
     block->count = 0;
     block->next = NULL;
+
     if (!(current = c->currentBlock)) {
         c->lineNumbers = block;
     } else {
         current->next = block;
     }
+
     c->currentBlock = block;
     return block;
 }
@@ -2350,16 +2563,19 @@ static LineNumberBlock *AddLineNumberBlock(BobCompiler *c) {
 /* FreeLineNumbers - free the line number table */
 static void FreeLineNumbers(BobCompiler *c) {
     LineNumberBlock *block, *next;
+
     for (block = c->lineNumbers; block != NULL; block = next) {
         next = block->next;
         BobFree(c->ic, block);
     }
+
     c->lineNumbers = c->currentBlock = NULL;
 }
 
 /* DumpLineNumbers - dump the line number table */
 static void DumpLineNumbers(BobCompiler *c) {
     LineNumberBlock *block;
+
     for (block = c->lineNumbers; block != NULL; block = block->next) {
         int i;
         for (i = 0; i < block->count; ++i) {
@@ -2372,9 +2588,11 @@ static void DumpLineNumbers(BobCompiler *c) {
 /* copystring - make a copy of a string */
 static char *copystring(BobCompiler *c, char *str) {
     char *new;
+
     if ((new = (char *) BobAlloc(c->ic, strlen(str) + 1)) == NULL) {
         BobInsufficientMemory(c->ic);
     }
+
     strcpy(new, str);
     return new;
 }

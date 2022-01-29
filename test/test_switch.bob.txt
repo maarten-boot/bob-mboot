@@ -1,6 +1,6 @@
 test_switch.bob
 2 true default expect true 
-<Object-7fd17a1d1060> 1 case: expect nil and 1
+<Object-7f1463aee060> 1 case: expect nil and 1
 1 nil default: expect 1 and nil 
 2 true default: expect 2 and true 
 qqq 2 case: expect qqq and 2 

@@ -49,8 +49,11 @@ static char *t_names[] = {
         "++", "--", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=",
 
         "define", "super", "new", "..",
-
-        "try", "catch", "finally", "throw", "[{", "}]"
+#ifdef BOB_INCLUDE_MATRIX
+        "try", "catch", "finally", "throw", "[{", "}]" // remove matrix
+#else
+        "try", "catch", "finally", "throw"
+#endif
 };
 
 /* prototypes */
@@ -282,16 +285,20 @@ static int rtoken(BobCompiler *c) {
                 break;
             case '[':
                 switch (ch = getch(c)) {
+#ifdef BOB_INCLUDE_MATRIX
                     case '{':
                         return T_MATBEGIN;
+#endif
                     default:
                         c->savedChar = ch;
                         return '[';
                 }
             case '}':
                 switch (ch = getch(c)) {
+#ifdef BOB_INCLUDE_MATRIX
                     case ']':
                         return T_MATEND;
+#endif
                     default:
                         c->savedChar = ch;
                         return '}';

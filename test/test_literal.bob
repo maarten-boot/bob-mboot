@@ -57,12 +57,17 @@ z1 = \[ ];
 z2 = \[ a, b, f1, f2 ];
 
 o1 = \{ };
+o1.Show();
+
 o2 = \{
     a: 9, b: "abc"
 };
+o2.Show();
+
 o3 = \{
     o2 a2: 9, b2: "abc"
 };
+o3.Show(); // so what is the purpose of the o2 in o3 ?
 
 /*
 o4 = \{
@@ -70,9 +75,6 @@ o4 = \{
 };
 */
 
-o1.Show();
-o2.Show();
-o3.Show(); // so what is the purpose of the o2 in o3 ?
 // o3.o2.Show(); // Error: Object <Object-7fca5a352014> has no property - o2
 stdout.Display(o3.a2, " ", o3.a, "\n"); // o3 gets al the properties of o2
 
@@ -93,7 +95,7 @@ case "a":
 	stdout.Display("case \"a\": ", a, "\n");
 	break;
 case \a:
-	stdout.Display("case \\b: ", a, "\n");
+	stdout.Display("case \\a: ", a, "\n");
 	break;
 case "b":
 	stdout.Display("case \"b\": ", a, "\n");
@@ -105,3 +107,35 @@ default:
 	stdout.Display("default: ", a, "\n");
 	break;
 }
+
+o5 = new Object();
+
+define o5.initialize() {
+    this.a = "a";
+    this.b = 'b';
+    return this;
+}
+o5.Show();
+
+o6 = \{ o5 a2: 7, b2: 9 };
+o6.Show();
+// stdout.Display(o6.a, " ", o6.a2, "\n"); //Error: Object <Object-7fb70132cf90> has no property - a
+
+o7 = new o5();
+o7.Show();
+o8 = \{ o7 a2: 7, b2: 9 };
+stdout.Display(o7.a, " ", o8.a2,"\n");
+stdout.Display(o8.a, " ", o8.a2, "\n");
+
+o8.Show();
+
+
+zz33 = function (a) { return a; };
+zz44 = \zz33;
+stdout.Display(zz33, "\n");
+// result = zz44(6);
+
+// test literal string
+s1 = "this is a string, what can we do with a literal string?";
+
+v1 = \[1,2,3,4];

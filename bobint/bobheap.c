@@ -103,7 +103,9 @@ BobInterpreter *BobMakeInterpreter(long size, long expandSize, long stackSize) {
     BobInitInteger(c);
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
     BobInitFloat(c);
+#ifdef BOB_INCLUDE_MATRIX
     BobInitMatrix(c);
+#endif
 #endif
     BobAddTypeSymbols(c);
 
@@ -269,15 +271,15 @@ BobValue BobAllocate(BobInterpreter *c, long size) {
     /* check for being able to expand memory */
     if ((expandSize = c->expandSize) == 0)
         BobInsufficientMemory(c);
-        
+
     /* make sure we allocate at least as much as needed */
     if (size > expandSize)
         expandSize = size;
-    
+
     /* allocate more old space */
     if (!(oldSpace = NewMemorySpace(c,expandSize)))
         BobInsufficientMemory(c);
-    
+
     /* allocate more new space */
     if (!(newSpace = NewMemorySpace(c,expandSize))) {
         BobFree(c,oldSpace);

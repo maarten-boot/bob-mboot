@@ -249,8 +249,10 @@ literal-object:
     \ "{" [ object-expression ] [ property-value [ "," property-value ] ... ] "}"
     .
 
+// note that in the context of a literal object the object expression must also be
+// the identifier of a object
 object-expression:
-    << not yet defined >>
+    identifier
     .
 
 property-value:

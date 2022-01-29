@@ -1,0 +1,17 @@
+// testing float after removing matrix
+
+f1 = 0.4;
+f2 = 1e2;
+f3 = -0.0009;
+f4 = -6.99E5;
+
+stdout.Display(
+	f1,
+	" ",
+	f2,
+	" ",
+	f3,
+	" ",
+	f4,
+	"\n"
+);

@@ -19,8 +19,12 @@ static BobValue BIF_Eval(BobInterpreter *c);
 static BobValue BIF_CompileFile(BobInterpreter *c);
 
 /* function table */
-static BobCMethod functionTable[] = {BobMethodEntry("Load", BIF_Load), BobMethodEntry("Eval", BIF_Eval),
-                                     BobMethodEntry("CompileFile", BIF_CompileFile), BobMethodEntry(0, 0)};
+static BobCMethod functionTable[] = {
+    BobMethodEntry("Load", BIF_Load),
+    BobMethodEntry("Eval", BIF_Eval),
+    BobMethodEntry("CompileFile", BIF_CompileFile),
+    BobMethodEntry(0, 0)
+};
 
 /* BobUseEval - enter the built-in functions and symbols for eval */
 void BobUseEval(BobInterpreter *c) {
@@ -76,6 +80,7 @@ static BobValue BIF_CompileFile(BobInterpreter *c) {
 /* BobEvalString - evaluate a string */
 BobValue BobEvalString(BobScope *scope, char *str) {
     BobStream *s = BobMakeStringStream(scope->c, (unsigned char *) str, strlen(str));
+
     if (s) {
         BobValue value = BobEvalStream(scope, s);
         BobCloseStream(s);
@@ -90,6 +95,7 @@ BobValue BobEvalStream(BobScope *scope, BobStream *s) {
     BobValue val;
     BobInitScanner(scope->c->compiler, s);
     val = BobCompileExpr(scope);
+
     return val ? BobCallFunction(scope, val, 0) : NULL;
 }
 

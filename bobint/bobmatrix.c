@@ -1,4 +1,5 @@
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
+#ifdef BOB_INCLUDE_MATRIX
 
 #include <string.h>
 #include <float.h>
@@ -105,7 +106,7 @@ static BobValue BIF_rref(BobInterpreter *c)
                 pivotRow = i;
             }
         }
-        
+
         /* make sure it's greater than zero */
         if (!NEAR_0(pivotValue)) {
 
@@ -183,7 +184,7 @@ static BobFloatType Det(BobInterpreter *c,BobValue obj)
         return BobMatrixElement(obj,0,0) * BobMatrixElement(obj,1,1)
              - BobMatrixElement(obj,0,1) * BobMatrixElement(obj,1,0);
     }
-    
+
     /* make a temporary matrix */
     BobCheck(c,2);
     BobPush(c,obj);
@@ -200,7 +201,7 @@ static BobFloatType Det(BobInterpreter *c,BobValue obj)
 
         /* compute the cofactor if the entry is non-zero */
         if (!NEAR_0(element)) {
-            
+
             /* build the submatrix */
             for (ii = k = 0; ii < size; ++ii)
                 if (ii != i) {
@@ -212,14 +213,14 @@ static BobFloatType Det(BobInterpreter *c,BobValue obj)
                         }
                     ++k;
                 }
-                            
+
             /* compute the i,j minor */
             BobPush(c,obj);
             BobPush(c,tmp);
             minor = element * Det(c,tmp);
             tmp = BobPop(c);
             obj = BobPop(c);
-    
+
             /* add the i,j cofactor */
             if ((i + j) & 1)
                 value -= minor;
@@ -359,7 +360,7 @@ static int MatrixPrint(BobInterpreter *c,BobValue obj,BobStream *s)
             obj = BobPop(c);
         }
     }
-    
+
     if (BobStreamPutS("\n}]",s) == BobStreamEOF)
         return BobStreamEOF;
 
@@ -384,7 +385,7 @@ static BobValue MatrixCopy(BobInterpreter *c,BobValue obj)
         for (i = 0; i < m->nRows; ++i) {
             m->rows[i] = p;
             p += m->nCols;
-        }    
+        }
     }
     return newObj;
 }
@@ -398,7 +399,7 @@ BobValue BobMakeMatrix(BobInterpreter *c,BobIntegerType nRows,BobIntegerType nCo
     BobMatrix *m = (BobMatrix *)new;
     BobFloatType *p;
     int i;
-    
+
     /* initialize the matrix */
     BobSetDispatch(new,&BobMatrixDispatch);
     m->nRows = nRows;
@@ -583,13 +584,13 @@ static BobValue MatrixMultiply(BobInterpreter *c,BobValue p1,BobValue p2)
     BobMatrix *b = (BobMatrix *)p2;
     BobMatrix *r;
     int i,j,k;
-    
+
     /* make sure the matrices are compatible */
     if (a->nCols != b->nRows)
         BobCallErrorHandler(c,BobErrIncompatible);
 
     r = (BobMatrix *)BobMakeMatrix(c,a->nRows,b->nCols);
-    
+
     for (i = 0; i < r->nRows; ++i)
         for (j = 0; j < r->nCols; ++j) {
             double sum = 0.0;
@@ -602,5 +603,6 @@ static BobValue MatrixMultiply(BobInterpreter *c,BobValue p1,BobValue p2)
     return (BobValue)r;
 }
 
+#endif
 #endif
 

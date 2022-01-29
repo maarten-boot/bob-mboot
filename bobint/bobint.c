@@ -596,6 +596,7 @@ static void Execute(BobInterpreter *c) {
                 }
                 break;
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
+#ifdef BOB_INCLUDE_MATRIX
                 case BobOpNEWMATRIX:
                     {
                         BobFloatType *p;
@@ -623,6 +624,7 @@ static void Execute(BobInterpreter *c) {
                     }
                     break;
 #endif
+#endif
             case BobOpTHROW:
                 break;
             default:
@@ -637,10 +639,12 @@ static void UnaryOp(BobInterpreter *c, int op) {
     BobValue p1 = c->val;
 
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
+#ifdef BOB_INCLUDE_MATRIX
     if (BobMatrixP(p1)) {
         c->val = BobMatrixUnaryOp(c,op,p1);
         return;
     }
+#endif
 #endif
 
     if (BobIntegerP(p1)) {
@@ -708,10 +712,12 @@ static void BinaryOp(BobInterpreter *c, int op) {
     BobValue p2 = c->val;
 
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
+#ifdef BOB_INCLUDE_MATRIX
     if (BobMatrixP(p1) || BobMatrixP(p2)) {
         c->val = BobMatrixBinaryOp(c,op,p1,p2);
         return;
     }
+#endif
 #endif
 
     if (BobIntegerP(p1) && BobIntegerP(p2)) {
@@ -793,8 +799,7 @@ static void BinaryOp(BobInterpreter *c, int op) {
             case '^':
             case 'L':
             case 'R':
-                BobTypeError(c,p1);
-                /* fall through */;
+                BobTypeError(c,p1);  /* fallthrough */;
             default:
                 fval = 0.0; /* never reached */
                 break;
