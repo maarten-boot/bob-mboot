@@ -10,7 +10,7 @@ literal-function:
     "function" [ name-string ] "(" formal-arguments ")" block
     .
 
-// needs testing do_function does not chack foir T_STRING later only T_LITERAL
+// needs testing do_function does not check for T_STRING later only T_LITERAL
 name-string:
     identifier      |
     literal-string
