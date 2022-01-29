@@ -40,10 +40,17 @@ static struct {
 
 /* BobToken name table */
 static char *t_names[] = {
-        "<string>", "<identifier>", "<integer>", "<float>", "function", "local", "if", "else", "while", "return", "for",
-        "break", "continue", "do", "switch", "case", "default", "nil", "<=", "==", "!=", ">=", "<<", ">>", "&&", "||",
-        "++", "--", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=", "define", "super", "new", "..", "try",
-        "catch", "finally", "throw", "[{", "}]"
+        "<string>", "<identifier>", "<integer>", "<float>",
+
+        "function", "local", "if", "else", "while", "return", "for",
+        "break", "continue", "do", "switch", "case", "default", "nil",
+
+        "<=", "==", "!=", ">=", "<<", ">>", "&&", "||",
+        "++", "--", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=",
+
+        "define", "super", "new", "..",
+
+        "try", "catch", "finally", "throw", "[{", "}]"
 };
 
 /* prototypes */
@@ -226,6 +233,7 @@ static int rtoken(BobCompiler *c) {
                 c->savedChar = ch;
                 return '*';
             case '#':
+                // alow for #!
                 while ((ch = getch(c)) != EOF) {
                     if (ch == '\n') {
                         break;

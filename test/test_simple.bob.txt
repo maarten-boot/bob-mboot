@@ -18,13 +18,13 @@ true t15 true
 nil t16a true
 true t16b true
 97 97 98 b
-<Method-7f0ae8297b64> [5,7,8,9] <Object-7f0ae8297da8> jj
-[5,9,8,9] <Object-7f0ae8297da8> jj
+<Method-7f366b01cb64> [5,7,8,9] <Object-7f366b01cda8> jj
+[5,9,8,9] <Object-7f366b01cda8> jj
 [5,9,8,9] 8 jj
 [1,2] 8 jj
-jjp<Object-7f0ae82986e0> 5
-<Object-7f0ae8298918> 5
-<Object-7f0ae8298918> 0
+jjp<Object-7f366b01d6e0> 5
+<Object-7f366b01d918> 5
+<Object-7f366b01d918> 0
 ["abc","def"]
 abc
-Class: <Object-7f0ae8293120>
+Class: <Object-7f366b018120>

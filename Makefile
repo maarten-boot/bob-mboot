@@ -1,8 +1,8 @@
-# XCFLAGS?=-m32
 # most copyright says 2001 (one says 1999)
 # internally in the old makefile we compile to bob2
 # so lets call it bot2 or bob-2001
 #
+
 BINDIR=./bin
 LIBDIR=./lib
 OBJDIR=./obj
@@ -16,11 +16,13 @@ LIBS=$(LIBDIR)/libbobc.a $(LIBDIR)/libbobi.a
 HDRS=$(HDRDIR)/bob.h $(HDRDIR)/bobint.h $(HDRDIR)/bobcom.h
 
 WFLAGS=-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers -Wimplicit-fallthrough=2
-# WFLAGS=-Wall
 XINCLUDES=-I$(HDRDIR) -I./bobcom -I./bobint
 
+# trace is a mboot thing, not yet implemented
 #XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT -DWITH_TRACE
-#XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT
+
+# FLOAT NOT WORKING DUE TO MATRIX , seems unfinished
+# XDEFINES=-DBOB_INCLUDE_FLOAT_SUPPORT
 
 CFLAGS=$(XCFLAGS) $(WFLAGS) $(XINCLUDES) $(XDEFINES)
 

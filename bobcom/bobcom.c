@@ -401,9 +401,12 @@ static void do_statement(BobCompiler *c) {
 static void do_define(BobCompiler *c) {
     char name[256];
     int tkn;
+
     switch (tkn = BobToken(c)) {
+
         case T_IDENTIFIER:
             strcpy(name, c->t_token);
+
             switch (tkn = BobToken(c)) {
                 case '.':
                     define_method(c, name);
@@ -414,6 +417,7 @@ static void do_define(BobCompiler *c) {
                     break;
             }
             break;
+
         default:
             BobParseError(c, "Expecting a function or a method definition");
             break;
@@ -432,18 +436,23 @@ static void define_method(BobCompiler *c, char *name) {
     /* get the selector */
     for (;;) {
         frequire(c, T_IDENTIFIER);
+
         strcpy(selector, c->t_token);
         if ((tkn = BobToken(c)) != '.') {
             break;
         }
+
         do_lit_symbol(c, selector);
+
         putcbyte(c, BobOpGETP);
         putcbyte(c, BobOpPUSH);
     }
 
     /* push the selector symbol */
     BobSaveToken(c, tkn);
+
     do_lit_symbol(c, selector);
+
     putcbyte(c, BobOpPUSH);
 
     /* compile the code */
@@ -520,19 +529,24 @@ static void compile_code(BobCompiler *c, char *name) {
 
     /* get the argument list */
     frequire(c, '(');
+
     if ((tkn = BobToken(c)) != ')' && tkn != T_DOTDOT) {
         BobSaveToken(c, tkn);
+
         do {
             char id[TKNSIZE + 1];
             frequire(c, T_IDENTIFIER);
             strcpy(id, c->t_token);
+
             if ((tkn = BobToken(c)) == '=') {
                 int cnt = ++ocnt + rcnt;
                 putcbyte(c, BobOpARGSGE);
                 putcbyte(c, cnt);
                 putcbyte(c, BobOpBRT);
                 nxt = putcword(c, 0);
+
                 do_init_expr(c);
+
                 AddArgument(c, c->arguments, id);
                 putcbyte(c, BobOpESET);
                 putcbyte(c, 0);
@@ -554,6 +568,7 @@ static void compile_code(BobCompiler *c, char *name) {
             }
         } while (tkn == ',');
     }
+
     require(c, tkn, ')');
 
     /* fixup the function header */
@@ -704,7 +719,9 @@ static void do_for(BobCompiler *c) {
         BobSaveToken(c, tkn);
         do {
             PVAL pv;
+
             do_expr2(c, &pv);
+
             rvalue(c, &pv);
         } while ((tkn = BobToken(c)) == ',');
         require(c, tkn, ';');
@@ -716,7 +733,9 @@ static void do_for(BobCompiler *c) {
         putcbyte(c, BobOpT);
     } else {
         BobSaveToken(c, tkn);
+
         do_expr(c);
+
         frequire(c, ';');
     }
 
@@ -732,7 +751,9 @@ static void do_for(BobCompiler *c) {
     update = codeaddr(c);
     if ((tkn = BobToken(c)) != ')') {
         BobSaveToken(c, tkn);
+
         do_expr(c);
+
         frequire(c, ')');
     }
 
@@ -744,7 +765,9 @@ static void do_for(BobCompiler *c) {
     fixup(c, body, codeaddr(c));
     ob = addbreak(c, end);
     oc = addcontinue(c, update);
+
     do_statement(c);
+
     end = rembreak(c, ob, end);
     remcontinue(c, oc);
 
@@ -902,30 +925,41 @@ static void do_case(BobCompiler *c) {
 
         /* get the case value */
         switch (BobToken(c)) {
+
             case '\\':
+
                 switch (BobToken(c)) {
+
                     case T_IDENTIFIER:
                         value = addliteral(c, BobInternCString(c->ic, c->t_token));
                         break;
+
                     default:
                         BobParseError(c, "Expecting a literal symbol");
                         value = 0; /* never reached */
                 }
                 break;
+
             case T_INTEGER:
                 value = addliteral(c, BobMakeInteger(c->ic, c->t_value));
                 break;
+
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-                case T_FLOAT:
-                    value = addliteral(c,BobMakeFloat(c->ic,c->t_fvalue));
-                    break;
+
+            case T_FLOAT:
+                value = addliteral(c,BobMakeFloat(c->ic,c->t_fvalue));
+                break;
+
 #endif
+
             case T_STRING:
                 value = addliteral(c, BobMakeCString(c->ic, c->t_token));
                 break;
+
             case T_NIL:
                 value = addliteral(c, c->ic->nilValue);
                 break;
+
             default:
                 BobParseError(c, "Expecting a literal value");
                 value = 0; /* never reached */
@@ -945,6 +979,7 @@ static void do_case(BobCompiler *c) {
         if ((entry = (CENTRY *) BobAlloc(c->ic, sizeof(CENTRY))) == NULL) {
             BobInsufficientMemory(c->ic);
         }
+
         entry->value = value;
         entry->label = codeaddr(c);
         entry->next = *pNext;
@@ -1093,6 +1128,7 @@ static void do_block(BobCompiler *c) {
 /* do_return - handle the 'return' statement */
 static void do_return(BobCompiler *c) {
     int tkn;
+
     if ((tkn = BobToken(c)) == ';') {
         putcbyte(c, BobOpNIL);
     } else {
@@ -1100,6 +1136,7 @@ static void do_return(BobCompiler *c) {
         do_expr(c);
         frequire(c, ';');
     }
+
     UnwindStack(c, c->blockLevel);
     putcbyte(c, BobOpRETURN);
 }
@@ -1114,14 +1151,18 @@ static void do_test(BobCompiler *c) {
 /* do_expr - parse an expression */
 static void do_expr(BobCompiler *c) {
     PVAL pv;
+
     do_expr1(c, &pv);
+
     rvalue(c, &pv);
 }
 
 /* do_init_expr - parse an initialization expression */
 static void do_init_expr(BobCompiler *c) {
     PVAL pv;
+
     do_expr2(c, &pv);
+
     rvalue(c, &pv);
 }
 
@@ -1575,47 +1616,59 @@ static void do_selector(BobCompiler *c) {
 /* do_primary - parse a primary expression and unary operators */
 static void do_primary(BobCompiler *c, PVAL *pv) {
     switch (BobToken(c)) {
+
         case T_FUNCTION:
             do_function(c, pv);
             break;
+
         case '\\':
             do_literal(c, pv);
             break;
+
         case '(':
             do_expr1(c, pv);
             frequire(c, ')');
             break;
+
         case T_INTEGER:
             do_lit_integer(c, c->t_value);
             pv->fcn = NULL;
             break;
+
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-            case T_FLOAT:
-                do_lit_float(c,c->t_fvalue);
-                pv->fcn = NULL;
-                break;
+        case T_FLOAT:
+            do_lit_float(c,c->t_fvalue);
+            pv->fcn = NULL;
+            break;
 #endif
+
         case T_STRING:
             do_lit_string(c, c->t_token);
             pv->fcn = NULL;
             break;
+
         case T_NIL:
             putcbyte(c, BobOpNIL);
             pv->fcn = NULL;
             break;
+
         case T_IDENTIFIER:
             findvariable(c, c->t_token, pv);
             break;
+
         case T_SUPER:
             do_super(c, pv);
             break;
+
         case T_NEW:
             do_new_object(c, pv);
             break;
+
         case '{':
             do_block(c);
             pv->fcn = NULL;
             break;
+
         default:
             BobParseError(c, "Expecting a primary expression");
             break;
@@ -1629,11 +1682,13 @@ static void do_function(BobCompiler *c, PVAL *pv) {
 
     /* check for a function name */
     switch (tkn = BobToken(c)) {
+
         case T_IDENTIFIER:
         case T_STRING:
             strcpy(name, c->t_token);
             nameP = TRUE;
             break;
+
         default:
             BobSaveToken(c, tkn);
             nameP = FALSE;
@@ -1644,30 +1699,38 @@ static void do_function(BobCompiler *c, PVAL *pv) {
     compile_code(c, nameP ? name : NULL);
 
     /* store the function as the value of the global symbol */
-    if (tkn == T_IDENTIFIER) {
+    // TODO: if (tkn == T_IDENTIFIER | tkn == T_STRING ) {
+    // if (tkn == T_IDENTIFIER) {
+    if (tkn == T_IDENTIFIER | tkn == T_STRING ) {
         putcbyte(c, BobOpGSET);
         putcword(c, make_lit_symbol(c, name));
     }
+
     pv->fcn = NULL;
 }
 
 /* do_literal - parse a literal expression */
 static void do_literal(BobCompiler *c, PVAL *pv) {
     switch (BobToken(c)) {
+
         case T_IDENTIFIER:  /* symbol */
             do_literal_symbol(c, pv);
             break;
+
         case '[':           /* vector */
             do_literal_vector(c, pv);
             break;
+
 #ifdef BOB_INCLUDE_FLOAT_SUPPORT
-            case T_MATBEGIN:    /* matrix */
-                do_literal_matrix(c,pv);
-                break;
+        case T_MATBEGIN:    /* matrix */
+            do_literal_matrix(c,pv);
+            break;
 #endif
+
         case '{':           /* object */
             do_literal_object(c, pv);
             break;
+
         default:
             BobParseError(c, "Expecting a symbol, vector or object literal");
             break;
@@ -1684,16 +1747,23 @@ static void do_literal_symbol(BobCompiler *c, PVAL *pv) {
 static void do_literal_vector(BobCompiler *c, PVAL *pv) {
     long cnt = 0;
     int tkn;
+
     if ((tkn = BobToken(c)) != ']') {
         BobSaveToken(c, tkn);
+
         do {
             ++cnt;
+
             do_init_expr(c);
+
             putcbyte(c, BobOpPUSH);
         } while ((tkn = BobToken(c)) == ',');
+
         require(c, tkn, ']');
     }
+
     do_lit_integer(c, cnt);
+
     putcbyte(c, BobOpNEWVECTOR);
     pv->fcn = NULL;
 }
@@ -1704,17 +1774,23 @@ static void do_literal_matrix(BobCompiler *c,PVAL *pv)
 {
     BobIntegerType nRows = 0;
     BobIntegerType nCols = 0;
+
     int tkn;
+
     if ((tkn = BobToken(c)) != T_MATEND) {
         BobSaveToken(c,tkn);
         ++nRows;
+
         for (;;) {
             BobIntegerType col;
+
             if (nRows == 1)
                 ++nCols;
             else if (++col > nCols)
                 BobParseError(c,"Too many values in row");
+
             do_init_expr(c);
+
             putcbyte(c,BobOpPUSH);
             if ((tkn = BobToken(c)) == ';' || tkn == T_MATEND) {
                 if (nRows > 1 && col < nCols) {
@@ -1722,6 +1798,7 @@ static void do_literal_matrix(BobCompiler *c,PVAL *pv)
                     while (++col <= nCols)
                         putcbyte(c,BobOpPUSH);
                 }
+
                 if (tkn == ';') {
                     ++nRows;
                     col = 0;
@@ -1732,8 +1809,10 @@ static void do_literal_matrix(BobCompiler *c,PVAL *pv)
             else if (tkn != ',')
                 BobSaveToken(c,tkn);
         }
+
         require(c,tkn,T_MATEND);
     }
+
     do_lit_integer(c,nRows);
     putcbyte(c,BobOpPUSH);
     do_lit_integer(c,nCols);
@@ -1745,48 +1824,78 @@ static void do_literal_matrix(BobCompiler *c,PVAL *pv)
 /* do_literal_object - parse a literal object */
 static void do_literal_object(BobCompiler *c, PVAL *pv) {
     int tkn;
+    /*
+        literal_object:
+            "{" "}" |
+            "{" identifier ":" expr [ "," identifier ":" expr ] ... "}" |
+            "{" identifier "}" |
+            "{" identifier identifier ":" expr [ "," identifier ":" expr ] ... "}"
+            .
+    */
+
     if ((tkn = BobToken(c)) == '}') {
+
         variable_ref(c, "Object");
         putcbyte(c, BobOpNEWOBJECT);
+
     } else {
         char token[TKNSIZE + 1];
+
         require(c, tkn, T_IDENTIFIER);
         strcpy(token, c->t_token);
+
         if ((tkn = BobToken(c)) == ':') {
+
             variable_ref(c, "Object");
             putcbyte(c, BobOpNEWOBJECT);
+
             for (;;) {
                 putcbyte(c, BobOpPUSH);
                 putcbyte(c, BobOpPUSH);
                 code_literal(c, addliteral(c, BobInternCString(c->ic, token)));
                 putcbyte(c, BobOpPUSH);
+
                 do_init_expr(c);
+
                 putcbyte(c, BobOpSETP);
                 putcbyte(c, BobOpDROP);
+
                 if ((tkn = BobToken(c)) != ',') {
                     break;
                 }
+
                 frequire(c, T_IDENTIFIER);
+
                 strcpy(token, c->t_token);
+
                 frequire(c, ':');
             }
+
             require(c, tkn, '}');
+
         } else {
             variable_ref(c, token);
             putcbyte(c, BobOpNEWOBJECT);
+
             if (tkn != '}') {
                 BobSaveToken(c, tkn);
+
                 do {
                     frequire(c, T_IDENTIFIER);
+
                     putcbyte(c, BobOpPUSH);
                     putcbyte(c, BobOpPUSH);
                     code_literal(c, addliteral(c, BobInternCString(c->ic, c->t_token)));
                     putcbyte(c, BobOpPUSH);
+
                     frequire(c, ':');
+
                     do_init_expr(c);
+
                     putcbyte(c, BobOpSETP);
                     putcbyte(c, BobOpDROP);
                 } while ((tkn = BobToken(c)) == ',');
+
                 require(c, tkn, '}');
             }
         }

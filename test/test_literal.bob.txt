@@ -1,0 +1,18 @@
+test_literal.bob
+6 7
+7 8
+8 9
+8 0
+a b
+Class: <Object-7fadb44df120>
+Class: <Object-7fadb44df120>
+Properties:
+  b: "abc"
+  a: 9
+Class: <Object-7fadb44e2100>
+Properties:
+  b2: "abc"
+  a2: 9
+9 9
+9 9
+9 0

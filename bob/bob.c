@@ -99,17 +99,17 @@ int main(int argc, char **argv) {
     /* catch errors and restart read/eval/print loop */
     if (BobUnwindCatch(c) == 0) {
         char *inputName, *outputName = NULL;
+
         int verboseP = FALSE;
+        int debugP = FALSE;
+        int traceP = FALSE;
+
         int i;
 
         /* process arguments */
         for (i = 1; i < argc; ++i) {
             if (argv[i][0] == '-') {
                 switch (argv[i][1]) {
-
-                    case '?':
-                        Usage();
-                        break;
 
                     case 'c':   /* compile source file */
                         if (argv[i][2]) {
@@ -119,9 +119,11 @@ int main(int argc, char **argv) {
                         } else {
                             Usage();
                         }
+
                         CompileFile(c, inputName, outputName);
                         interactiveP = FALSE;
                         outputName = NULL;
+
                         break;
 
                     case 'g':   /* emit debugging information when compiling */
@@ -143,10 +145,20 @@ int main(int argc, char **argv) {
                         interactiveP = FALSE;
                         break;
 
+                    case 't':   /* set trace */
+                        traceP = TRUE;
+                        break;
+
+                    case 'd':   /* set debug */
+                        debugP = TRUE;
+                        break;
+
                     case 'v':   /* display values of expressions loaded */
                         verboseP = TRUE;
                         break;
 
+                    case 'h':
+                    case '?':
                     default:
                         Usage();
                         break;
@@ -287,4 +299,3 @@ usage: bob [-c file]     compile a source file\n\
            [file]        load a source or object file\n");
     exit(1);
 }
-

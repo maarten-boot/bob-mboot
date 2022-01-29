@@ -341,9 +341,10 @@ static void Execute(BobInterpreter *c) {
         BobValue p1, p2, *p;
         unsigned int off;
         BobIntegerType n;
+        BobIntegerType m;
         int i;
 
-        /*DecodeInstruction(c,c->code,c->pc - c->cbase,c->standardOutput);*/
+        /* DecodeInstruction(c,c->code,c->pc - c->cbase,c->standardOutput); */
         switch (*c->pc++) {
             case BobOpCALL:
                 Call(c, &BobCallCDispatch, *c->pc++);
@@ -599,13 +600,17 @@ static void Execute(BobInterpreter *c) {
                     {
                         BobFloatType *p;
                         p1 = BobPop(c);
+
                         if (!BobIntegerP(p1)) BobTypeError(c,c->val);
                         if (!BobIntegerP(c->val)) BobTypeError(c,c->val);
+
                         m = BobIntegerValue(p1);
                         n = BobIntegerValue(c->val);
+
                         c->val = BobMakeMatrix(c,m,n);
                         n *= m; /* total number of matrix elements */
                         p = BobMatrixAddress(c->val) + n;
+
                         while (--n >= 0) {
                             BobValue val = BobPop(c);
                             if (BobFloatP(val))
