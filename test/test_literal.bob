@@ -66,7 +66,7 @@ o3 = \{
 
 /*
 o4 = \{
-    f1 a2: 9, b2: "abc" Error: Can't create an instance
+    f1 a2: 9, b2: "abc" // Error: Can't create an instance
 };
 */
 
@@ -90,13 +90,17 @@ stdout.Display(a," ",b, "\n");
 switch(a) {
 
 case "a":
-	stdout.Display("case b: ", a, "\n");
+	stdout.Display("case \"a\": ", a, "\n");
 	break;
-
+case \a:
+	stdout.Display("case \\b: ", a, "\n");
+	break;
 case "b":
-	stdout.Display("case b: ", a, "\n");
+	stdout.Display("case \"b\": ", a, "\n");
 	break;
-
+case \b:
+	stdout.Display("case \\b: ", a, "\n");
+	break;
 default:
 	stdout.Display("default: ", a, "\n");
 	break;

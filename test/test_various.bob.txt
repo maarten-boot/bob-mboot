@@ -52,7 +52,7 @@ fibo1 6765
  test vector 
 6 8
 1
-<Object-7f2fa7b6ec6c>
+<Object-7fcc2c04cc6c>
 99
 999
 abcdefg 101 102
@@ -61,6 +61,6 @@ a
 zyxwvu 102 117 a
 5
 5
-obj1<Object-7f2fa7b6ee04>
-obj2<Object-7f2fa7b6eeb4>
-obj3<Object-7f2fa7b6eef4>
+obj1<Object-7fcc2c04ce04>
+obj2<Object-7fcc2c04ceb4>
+obj3<Object-7fcc2c04cef4>

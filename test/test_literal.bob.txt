@@ -4,12 +4,12 @@ test_literal.bob
 8 9
 8 0
 a b
-Class: <Object-7fae8b337120>
-Class: <Object-7fae8b337120>
+Class: <Object-7f44b5083120>
+Class: <Object-7f44b5083120>
 Properties:
   b: "abc"
   a: 9
-Class: <Object-7fae8b33a100>
+Class: <Object-7f44b5086100>
 Properties:
   b2: "abc"
   a2: 9
@@ -17,4 +17,4 @@ Properties:
 9 9
 9 0
 b b here , how are you?
-default: b
+case \b: b
