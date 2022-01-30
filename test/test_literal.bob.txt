@@ -4,12 +4,12 @@ test_literal.bob
 8 9
 8 0
 a b
-Class: <Object-7f3b150b5120>
-Class: <Object-7f3b150b5120>
+Class: <Object-7f6f8d2eb120>
+Class: <Object-7f6f8d2eb120>
 Properties:
   b: "abc"
   a: 9
-Class: <Object-7f3b150b8690>
+Class: <Object-7f6f8d2ee690>
 Properties:
   b2: "abc"
   a2: 9
@@ -18,21 +18,21 @@ Properties:
 9 0
 b b here , how are you?
 case \b: b
-Class: <Object-7f3b150b5120>
+Class: <Object-7f6f8d2eb120>
 Properties:
   initialize: <Method-initialize>
-Class: <Object-7f3b150b91ac>
+Class: <Object-7f6f8d2ef1ac>
 Properties:
   b2: 9
   a2: 7
-Class: <Object-7f3b150b91ac>
+Class: <Object-7f6f8d2ef1ac>
 Properties:
   b: 98
   a: "a"
 a 7
 a 7
-Class: <Object-7f3b150b963c>
+Class: <Object-7f6f8d2ef63c>
 Properties:
   b2: 9
   a2: 7
-<Method-7f3b150b9da8>
+<Method-7f6f8d2efda8>

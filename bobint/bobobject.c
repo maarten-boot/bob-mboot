@@ -89,23 +89,31 @@ static BobValue BIF_ExistsLocally(BobInterpreter *c) {
 static BobValue BIF_Send(BobInterpreter *c) {
     BobIntegerType i, vcnt, argc;
     BobValue argv;
+
     BobCheckArgMin(c, 4);
+
     BobCheckType(c, 1, BobObjectP);
     BobCheckType(c, BobArgCnt(c), BobVectorP);
+
     argv = BobGetArg(c, BobArgCnt(c));
     if (BobMovedVectorP(argv)) {
         argv = BobVectorForwardingAddr(argv);
     }
+
     vcnt = BobVectorSizeI(argv);
     argc = BobArgCnt(c) + vcnt - 2;
+
     BobCheck(c, argc + 1);
     BobPush(c, BobGetArg(c, 1));
     BobPush(c, BobGetArg(c, 3));
     BobPush(c, BobGetArg(c, 1));
+
     for (i = 4; i < BobArgCnt(c); ++i)
         BobPush(c, BobGetArg(c, i));
+
     for (i = 0; i < vcnt; ++i)
         BobPush(c, BobVectorElementI(argv, i));
+
     return BobInternalSend(c, argc);
 }
 
@@ -113,18 +121,24 @@ static BobValue BIF_Send(BobInterpreter *c) {
 static BobValue BIF_Show(BobInterpreter *c) {
     BobStream *s = c->standardOutput;
     BobValue obj, props;
+
     BobParseArguments(c, "V=*|P=", &obj, &BobObjectDispatch, &s, BobFileDispatch);
     props = BobObjectProperties(obj);
+
     BobStreamPutS("Class: ", s);
     BobPrint(c, BobObjectClass(obj), s);
     BobStreamPutC('\n', s);
+
     if (BobObjectPropertyCount(obj)) {
         BobStreamPutS("Properties:\n", s);
+
         if (BobHashTableP(props)) {
             BobIntegerType cnt = BobHashTableSize(props);
             BobIntegerType i;
+
             for (i = 0; i < cnt; ++i) {
                 BobValue prop = BobHashTableElement(props, i);
+
                 for (; prop != c->nilValue; prop = BobPropertyNext(prop)) {
                     BobStreamPutS("  ", s);
                     BobPrint(c, BobPropertyTag(prop), s);
@@ -143,6 +157,7 @@ static BobValue BIF_Show(BobInterpreter *c) {
             }
         }
     }
+
     return obj;
 }
 

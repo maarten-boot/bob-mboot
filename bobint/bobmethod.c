@@ -14,8 +14,11 @@ static BobValue BIF_Apply(BobInterpreter *c);
 /* virtual property methods */
 
 /* Method methods */
-static BobCMethod methods[] = {BobMethodEntry("Decode", BIF_Decode), BobMethodEntry("Apply", BIF_Apply),
-                               BobMethodEntry(0, 0)};
+static BobCMethod methods[] = {
+    BobMethodEntry("Decode", BIF_Decode),
+    BobMethodEntry("Apply", BIF_Apply),
+    BobMethodEntry(0, 0)
+};
 
 /* Method properties */
 static BobVPMethod properties[] = {BobVPMethodEntry(0, 0, 0)};
@@ -31,6 +34,7 @@ void BobInitMethod(BobInterpreter *c) {
 static BobValue BIF_Decode(BobInterpreter *c) {
     BobStream *s = c->standardOutput;
     BobValue obj;
+
     BobParseArguments(c, "V=*|P=", &obj, &BobMethodDispatch, &s, BobFileDispatch);
     if (BobCMethodP(obj)) {
         BobPrint(c, obj, s);
@@ -45,21 +49,34 @@ static BobValue BIF_Decode(BobInterpreter *c) {
 static BobValue BIF_Apply(BobInterpreter *c) {
     BobIntegerType i, vcnt, argc;
     BobValue argv;
+
+    // we need minimal 3 arguments, but ther may be more
     BobCheckArgMin(c, 3);
+
+    // the first must be a method
     BobCheckType(c, 1, BobMethodP);
+
+    fprintf(stderr,"BobArgCnt(c): %d\n", BobArgCnt(c));
     BobCheckType(c, BobArgCnt(c), BobVectorP);
     argv = BobGetArg(c, BobArgCnt(c));
+
     if (BobMovedVectorP(argv)) {
         argv = BobVectorForwardingAddr(argv);
     }
+
     vcnt = BobVectorSizeI(argv);
+    fprintf(stderr,"BobVectorSizeI: %d\n", vcnt);
+
     argc = BobArgCnt(c) + vcnt - 3;
     BobCheck(c, argc + 1);
     BobPush(c, BobGetArg(c, 1));
+
     for (i = 3; i < BobArgCnt(c); ++i)
         BobPush(c, BobGetArg(c, i));
+
     for (i = 0; i < vcnt; ++i)
         BobPush(c, BobVectorElementI(argv, i));
+
     return BobInternalCall(c, argc);
 }
 

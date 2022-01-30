@@ -20,7 +20,11 @@ define o1.initialize(arg1, arg2 = 3 , arg3..) {
 
 	this;
 }
-define o1.klak() { return this.arg4.size; }
+define o1.klak(a, b="b", c..) {
+	stdout.Display("args are: ", a, " ", b, " ", c,"\n");
+	this.Show();
+	return this.arg4.size;
+}
 
 // the current object wil not have any propery variables but it will hev the initialize method
 o1.Show();
@@ -33,7 +37,7 @@ o2.Show();
 // note that although the property variables are inherited the initializer seems not but it is
 o22 = new o2(99);
 // the initializer gets called with the one mandatory argument
-stdout.Display("o22.klak(): ", o22.klak(), "\n");
+stdout.Display("o22.klak(): ", o22.klak(5), "\n");
 o22.Show();
 
 // BUG?: show also inherited methods on new derived objects ?
@@ -90,5 +94,50 @@ stdout.Display("does o22 have initialize locally: ", p3, "\n");
 stdout.Display("does o22 have klak: ", o22.Exists(\klak), "\n");
 stdout.Display("does o22 have foo: ", o22.Exists(\foo), "\n");
 
-// not that i have not seen class variables or a way to see if the symbol is a method or a variable
+// i have not seen class variables or a way to see if the symbol is a method or a variable
+o22.arg4 = \[1,2,3,4,"a", \p3, nil];
+v1 = o22.klak(6, 6,8,9,10);
+stdout.Display("o22.klak(): ", v1," ", o22.arg4[5], "\n");
 
+// you must pass at least a empty [] reference as args
+// object "." "Send" "(" selectorSymbol ","" "[" args "]" ")" ";" .
+// args : [ arg [ "," arg ] ... ]
+v1 = o22.Send(\klak, \[6, "gg", 9,8,7,6]);
+stdout.Display("o22.klak(): ", v1," ", o22.arg4[5], "\n");
+
+Object.Show();
+// Method.Show(); // Error: Object <Type-Method> has no method - Show
+
+// decode a method back into assembly on the default out stream
+zz = o22.klak.Decode();
+stdout.Display(zz, "\n");
+
+// or open a file where to write the data to
+f1 = new File("bla.txt","w");
+stdout.Display(f1, "\n");
+
+zz = o22.klak.Decode(f1);
+stdout.Display(zz, "\n");
+
+// zz = o22.klak.Apply(); // Error: Too few arguments - <CMethod-Apply>
+// zz = o22.klak.Apply(1); //Error: Wrong type - 1
+// zz = o22.klak.Apply(\[1]); // Error: Too few arguments - <Method-klak>
+// zz = o22.klak.Apply(\[1, 2, 3, 4 ,5]); // Error: Object 1 has no property - arg4
+
+// apply the metod to a obj, with a list of args
+o2.Show();
+// mandatory are 3 arguments , what is the function of the second ?
+zz = o22.klak.Apply(o2,\[7,3,4,5,6,7,8,9]);
+stdout.Display(zz, "\n");
+
+zz = o22.klak.Apply(o2, \[3,4,7]);
+stdout.Display(zz, "\n");
+o22.Show();
+o2.Show();
+
+define f77(a) { stdout.Display("f77: ", a, "\n"); }
+f77(5);
+
+// unclear what the first 2 arguments should be
+a = 8;
+f77.Apply(1,2,\[3]);
